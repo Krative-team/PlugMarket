@@ -24,8 +24,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 <script>
-const calcFee=p=>Math.round(Number(p||0)*15/100);
-const calcSellerShare=p=>Number(p||0)-calcFee(p);
+// FIXED: calcFee / calcSellerShare REMOVED here - they already exist in app.js
+// Duplicating them caused "Identifier 'calcFee' has already been declared" and killed Admin
 
 function twofaBadge(l){
   if(l.has_2fa==='linked_email') return `<span style="padding:3px 8px;border-radius:20px;background:#00BFFF;color:#000;font-weight:700;font-size:11px">WITH LINKED EMAIL</span>`;
@@ -127,7 +127,6 @@ async function deleteAdmin(id){
     alert('Access denied. Logged in as '+user.email+' - expected etoabasis@gmail.com');
     location.href='index.html'; return;
   }
-  // *** PATCH IS HERE - switch to anon client for data, like Test 2 ***
   client = window.supabase.createClient("https://pfrpgijjqajwuhyfcdgw.supabase.co","sb_publishable_XCDG8j8Te4UHw_qw8yOnJA_hThHuRdT", {auth:{persistSession:false, autoRefreshToken:false}});
   await loadAdminListings();
   loadAutoAlerts();
