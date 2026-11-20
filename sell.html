@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sell Your Account - PlugMarket</title>
+<link rel="stylesheet" href="style.css?v=13">
+</head>
+<body>
+<div class="page">
+<div class="form-card">
+<h2 id="sellTitle">Sell Your Account</h2>
+<div class="warning-box">1) Submit → 2) PlugMarket tests login → 3) Approve → 4) Buyer pays PlugMarket → 5) Buyer confirms → 6) You get 85%. Fake = ban.</div>
+<input type="hidden" id="f-id">
+<label>Platform *</label>
+<select id="f-platform" onchange="syncLoginFields()" oninput="syncLoginFields()" onkeyup="syncLoginFields()" onblur="syncLoginFields()" onclick="setTimeout(syncLoginFields,100)"><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Facebook</option><option>X</option></select>
+
+<div class="row"><div><label>Country *</label><input id="f-country" placeholder="Nigeria" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph"></div>
+<div><label id="label-followers">Followers *</label><input id="f-followers" type="number" placeholder="30000" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph"></div></div>
+
+<div class="row"><div><label>Account Age</label><input id="f-age" placeholder="2 years" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph"></div>
+<div><label>Price USDT *</label><input id="f-usdt" type="number" inputmode="decimal" placeholder="150" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph" oninput="if(this.value){document.getElementById('f-naira').value=Math.round(parseFloat(this.value)*1500)}else{document.getElementById('f-naira').value=''}" onkeyup="if(this.value){document.getElementById('f-naira').value=Math.round(parseFloat(this.value)*1500)}else{document.getElementById('f-naira').value=''}"></div></div>
+
+<label>Price Naira *</label>
+<input id="f-naira" type="number" inputmode="numeric" placeholder="225000" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph" oninput="if(this.value){document.getElementById('f-usdt').value=Math.round((parseFloat(this.value)/1500)*100)/100}else{document.getElementById('f-usdt').value=''}" onkeyup="if(this.value){document.getElementById('f-usdt').value=Math.round((parseFloat(this.value)/1500)*100)/100}else{document.getElementById('f-usdt').value=''}">
+
+<div class="row"><div><label>Account Verified?</label>
+<select id="f-verified"><option value="no">No - Not Verified</option><option value="yes">Yes - Verified / Blue Tick</option></select>
+</div>
+<div><label>Monetization Status</label>
+<select id="f-monetization"><option value="Not specified">Not specified</option><option value="Monetized">Monetized</option><option value="Not Monetized">Not Monetized</option></select>
+</div></div>
+
+<label>Description</label><textarea id="f-desc" rows="3" placeholder="A 30k followers TikTok account with clean record, Nigerian audience..." onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph"></textarea>
+<div id="descWarn" style="display:none;font-size:12px;color:#FF4757;margin:6px 0">Contact info is not allowed - it was removed. Buyers contact you through PlugMarket only.</div>
+<p style="font-size:11px;color:#9AA0B0;margin:4px 0">Do not add phone, WhatsApp, Telegram or email. Buyers contact you through PlugMarket only.</p>
+<p id="autoTitlePreview" style="font-size:12px;color:#00E676;margin:6px 0"></p>
+
+<h3 style="margin-top:18px">Video Proof * REQUIRED</h3>
+<p style="font-size:12px;color:#FFA502;margin:6px 0">15-60 sec screen recording showing profile, followers, monetization. No password in video.</p>
+<div style="border:2px dashed #00E676;border-radius:12px;padding:14px;text-align:center;margin:10px 0;background:#0B0E14">
+<input type="file" id="f-video" accept="video/*" onchange="previewSellVideo()">
+<video id="sellVideoPreview" controls playsinline style="width:100%;max-height:280px;border-radius:10px;margin-top:10px;display:none;background:#000"></video>
+<div id="sellVideoInfo" class="msg" style="display:none"></div>
+<div id="existingVideoBox" style="display:none;margin-top:10px"><small style="color:#00E676">Existing video saved.</small><br><a id="existingVideoLink" href="#" target="_blank" style="color:#00E676">View existing video</a></div>
+</div>
+
+<h3 style="margin-top:18px" id="loginSectionTitle">Login Details</h3>
+<label id="label-acc-user">Username / Email *</label><input id="f-acc-user" placeholder="TikTok username" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph">
+<label id="label-acc-pass">Password *</label><input id="f-acc-pass" type="text" placeholder="Account password" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph">
+<label id="label-acc-email">Linked Email</label><input id="f-acc-email" placeholder="Email linked to this TikTok" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph">
+<label id="label-acc-notes">Notes for Buyer</label><textarea id="f-acc-notes" rows="2" placeholder="e.g. No 2FA, email change allowed..." onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph"></textarea>
+
+<h3 style="margin-top:18px">2FA / OTP - IMPORTANT</h3>
+<div style="background:#0B0E14;color:#FFA502;border:1px solid #333;border-radius:12px;padding:12px;font-size:12px;line-height:1.5">Facebook / Instagram / YouTube will send OTP to YOUR phone/email when buyer logs in.<br>
+Buyer cannot log in without that code.<br><br>
+<label>Does this account have 2FA / OTP on?</label>
+<select id="f-has-2fa"><option value="yes">Yes - I will forward OTP</option><option value="no">No 2FA</option><option value="will_remove">I will turn it OFF before transfer</option></select>
+<br><br>
+<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="f-otp-agree" style="width:18px;height:18px;margin-top:2px"> <span>I understand I must be ONLINE to forward OTP within 30 mins of buyer paying, or deal auto-cancels and I get a strike.</span></label>
+</div>
+
+<h3 style="margin-top:18px">Bank Details (85% Payout)</h3>
+<label>Bank Name</label>
+<select id="f-bank-name"><option value="">Select Bank</option><option value="GTBank" data-code="058">GTBank</option><option value="Access Bank" data-code="044">Access Bank</option><option value="FirstBank" data-code="011">FirstBank</option><option value="UBA" data-code="033">UBA</option><option value="Zenith Bank" data-code="057">Zenith Bank</option><option value="Opay" data-code="999992">Opay</option><option value="Kuda" data-code="50211">Kuda</option><option value="Moniepoint" data-code="50515">Moniepoint</option><option value="Palmpay" data-code="999991">Palmpay</option></select>
+<label>Account Number</label><input id="f-account-number" placeholder="0123456789" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph">
+<label>Account Name</label><input id="f-account-name" placeholder="Full name on account" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph">
+
+<h3 style="margin-top:18px">USDT Details</h3>
+<label>USDT Wallet</label><input id="f-usdt-wallet" placeholder="T... your USDT wallet address" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph">
+<label>USDT Network</label>
+<select id="f-usdt-network"><option value="">Select Network</option><option>TRC20 (Tron)</option><option>ERC20 (Ethereum)</option><option>BEP20 (BSC)</option><option>Solana</option><option>Polygon</option></select>
+
+<button class="submit" onclick="submitListing()">Submit</button>
+<div id="sellMsg" class="msg"></div>
+<button class="close" onclick="location.href='index.html'">Back to Marketplace</button>
+</div>
+</div>
+<div class="footer-bar">PlugMarket © 2026 - Secured Marketplace for Users</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js?v=13"></script>
+<script>
+let sellVideoFile=null, existingVideoUrl="";
+// BLOCK CONTACT: strip any Contact heading / line / phone / social handle before save + live
+function stripContact(t){
+  if(!t) return '';
+  const PHONE = /(\+?234[\s\-]?[789]\d{9}|0[789]\d{9}|\+?\d[\d\s\-]{7,}\d)/;
+  let out = t.split('\n').filter(line=>{
+    const l = line.toLowerCase();
+    if(l.includes('monetiz')) return true;
+    if(PHONE.test(line)) return false;
+    return !l.includes('contact') && !l.includes('whatsapp') && !l.includes('wa.me') && !l.includes('phone') && !l.includes('call me') && !l.includes('dm me') && !l.includes('telegram') && !l.includes('email me') && !l.includes('@gmail') && !l.includes('@yahoo') && !l.includes('@hotmail') && !l.includes('reach me');
+  }).join(' ');
+  out = out.replace(/\+?234[\s\-]?[789]\d{9}/g,'').replace(/\b0[789]\d{9}\b/g,'').replace(/wa\.me\/\d+/gi,'').replace(/contact\s*:?/gi,'');
+  return out.replace(/\s+/g,' ').trim();
+}
+function checkDescContact(){
+  const el=document.getElementById('f-desc'); if(!el) return;
+  const warn=document.getElementById('descWarn');
+  const cleaned=stripContact(el.value);
+  if(cleaned!==el.value.trim()){ if(warn) warn.style.display='block'; } else { if(warn) warn.style.display='none'; }
+}
+function setPH(id,text){ const el=document.getElementById(id); if(!el) return; el.dataset.ph=text; if(!el.value) el.placeholder=text; }
+function fmtFollowers(n){ n=Number(n||0); if(n>=1000000) return (n/1000000).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1000) return Math.round(n/1000)+'k'; return String(n); }
+function buildTitle(){
+  const platform=document.getElementById('f-platform').value;
+  const country=document.getElementById('f-country').value.trim();
+  const followers=document.getElementById('f-followers').value;
+  const mon=document.getElementById('f-monetization').value;
+  const ver=document.getElementById('f-verified').value==='yes';
+  let t = (followers?fmtFollowers(followers)+' ':'') + (country?country+' ':'') + platform;
+  if(mon==='Monetized') t += ' - Monetized';
+  if(ver) t += ' • Verified';
+  return t.trim();
+}
+function updateTitlePreview(){ const el=document.getElementById('autoTitlePreview'); if(el) el.innerText = buildTitle() ? 'Your listing title will be: '+buildTitle() : ''; }
+['f-platform','f-country','f-followers','f-monetization','f-verified'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input',updateTitlePreview); if(el) el.addEventListener('change',updateTitlePreview); });
+document.getElementById('f-desc').addEventListener('input',checkDescContact);
+document.getElementById('f-desc').addEventListener('blur',function(){ const c=stripContact(this.value); if(c!==this.value.trim()){ this.value=c; } checkDescContact(); });
+function syncLoginFields(){
+  const p=document.getElementById('f-platform').value;
+  const map={
+    TikTok:{ user:"Username / Email *", pass:"Password *", email:"Linked Email", followers:"Followers *", userPH:"TikTok username", passPH:"Account password", emailPH:"Email linked to this TikTok", descPH:"A 30k followers TikTok account with clean record, Nigerian audience...", followersPH:"30000", notesPH:"e.g. No 2FA, email change allowed..." },
+    Instagram:{ user:"Username / Email *", pass:"Password *", email:"Linked Email", followers:"Followers *", userPH:"Instagram username", passPH:"Account password", emailPH:"Email linked to this Instagram", descPH:"A 50k followers Instagram account with clean record, Nigerian audience...", followersPH:"50000", notesPH:"e.g. Original email included, no 2FA..." },
+    YouTube:{ user:"Google Email *", pass:"Google Password *", email:"Recovery Email", followers:"Subscribers *", userPH:"Gmail for this YouTube channel", passPH:"Google password", emailPH:"Recovery email for this Gmail", descPH:"A 100k subscribers YouTube channel with clean record, Nigerian audience...", followersPH:"100000", notesPH:"e.g. Brand account, AdSense included..." },
+    Facebook:{ user:"Email / Phone *", pass:"Password *", email:"Linked Email", followers:"Followers *", userPH:"Email or phone for this Facebook", passPH:"Facebook password", emailPH:"Email linked to this Facebook", descPH:"A 20k followers Facebook page with clean record, Nigerian audience...", followersPH:"20000", notesPH:"e.g. Page access, no restrictions..." },
+    X:{ user:"Username / Email *", pass:"Password *", email:"Linked Email", followers:"Followers *", userPH:"X username", passPH:"X password", emailPH:"Email linked to this X account", descPH:"A 15k followers X account with clean record, Nigerian audience...", followersPH:"15000", notesPH:"e.g. No 2FA, email change allowed..." }
+  };
+  const c=map[p]||map.TikTok;
+  document.getElementById('loginSectionTitle').innerText=p+" Login Details";
+  document.getElementById('label-acc-user').innerText=c.user;
+  document.getElementById('label-acc-pass').innerText=c.pass;
+  document.getElementById('label-acc-email').innerText=c.email;
+  document.getElementById('label-followers').innerText=c.followers;
+  setPH('f-acc-user',c.userPH); setPH('f-acc-pass',c.passPH); setPH('f-acc-email',c.emailPH);
+  setPH('f-desc',c.descPH); setPH('f-followers',c.followersPH); setPH('f-acc-notes',c.notesPH);
+  updateTitlePreview();
+}
+function previewSellVideo(){ const input=document.getElementById('f-video'); const file=input.files[0]; if(!file) return; if(!file.type.startsWith('video/')){alert("Video only");input.value='';return;} if(file.size>50*1024*1024){alert("Keep under 50MB");input.value='';return;} sellVideoFile=file; const url=URL.createObjectURL(file); const v=document.getElementById('sellVideoPreview'); v.src=url; v.style.display='block'; document.getElementById('sellVideoInfo').style.display='block'; document.getElementById('sellVideoInfo').innerText="Selected: "+file.name; }
+async function uploadVideoToStorage(file,listingId){ try{ const ext=(file.name.split('.').pop()||'mp4').split('?')[0]; const fileName='listing-'+listingId+'-'+Date.now()+'.'+ext; const {error}=await client.storage.from('videos').upload(fileName,file,{contentType:file.type,upsert:true}); if(error) throw error; const {data}=client.storage.from('videos').getPublicUrl(fileName); return data.publicUrl; }catch(e){ alert("Video upload failed: "+(e.message||e)); return null; } }
+async function submitListing(){ getClient(); const msg=document.getElementById('sellMsg'); const {data:{user}}=await client.auth.getUser(); if(!user){ location.href='auth.html?next=sell.html'; return; } if(!document.getElementById('f-otp-agree').checked){ msg.innerText="Tick the OTP agreement - you must be online for transfer."; return; } const id=document.getElementById('f-id').value; const accUser=document.getElementById('f-acc-user').value.trim(); const accPass=document.getElementById('f-acc-pass').value.trim(); const bankNum=document.getElementById('f-account-number').value.trim(); const usdtWallet=document.getElementById('f-usdt-wallet').value.trim(); const bankSelect=document.getElementById('f-bank-name'); const isEdit=!!id; const cleanDescription=stripContact(document.getElementById('f-desc').value.trim()); document.getElementById('f-desc').value=cleanDescription; const payload={title:buildTitle(),platform:document.getElementById('f-platform').value,country:document.getElementById('f-country').value.trim(),followers:parseInt(document.getElementById('f-followers').value),account_age:document.getElementById('f-age').value.trim()||'1 year',price_naira:parseInt(document.getElementById('f-naira').value),price_usdt:parseFloat(document.getElementById('f-usdt').value),description:cleanDescription,seller_uid:user.id,account_username:accUser,account_password:accPass,account_email:document.getElementById('f-acc-email').value.trim(),account_notes:stripContact(document.getElementById('f-acc-notes').value.trim()),has_2fa:document.getElementById('f-has-2fa').value,is_verified:document.getElementById('f-verified').value==='yes',monetization_status:document.getElementById('f-monetization').value,seller_bank_name:bankSelect.value,seller_bank_code:bankSelect.selectedOptions[0]?.dataset?.code||'',seller_account_number:bankNum,seller_account_name:document.getElementById('f-account-name').value.trim(),seller_usdt_wallet:usdtWallet,seller_usdt_network:document.getElementById('f-usdt-network').value}; if(!isEdit) payload.status='pending'; if(!payload.country||!payload.followers||!payload.price_naira||!payload.price_usdt){ msg.innerText="Fill Country, Followers, Prices"; return; } if(!accUser||!accPass){ msg.innerText="Add Username and Password."; return; } if(!bankNum&&!usdtWallet){ msg.innerText="Add Bank or USDT for 85% payout."; return; } if(!sellVideoFile&&!existingVideoUrl&&!isEdit){ msg.innerText="Video Proof REQUIRED."; return; } msg.innerText="Submitting..."; let res; if(id) res=await client.from('market_listings').update(payload).eq('id',id).select(); else res=await client.from('market_listings').insert([payload]).select(); if(res.error){ msg.innerText="Error: "+res.error.message; return; } const savedId=res.data&&res.data[0]?res.data[0].id:id; if(sellVideoFile){ msg.innerText="Uploading video..."; const videoUrl=await uploadVideoToStorage(sellVideoFile,savedId); if(videoUrl) await client.from('market_listings').update({video_url:videoUrl}).eq('id',savedId); else { msg.innerText="Video upload failed."; return; } } msg.innerText=isEdit?"Saved.":"Submitted! PlugMarket will test login and Approve if real."; setTimeout(()=>location.href='index.html',1200); }
+syncLoginFields();
+(async()=>{ getClient(); const {data:{user}}=await client.auth.getUser(); if(!user){ location.href='auth.html?next=sell.html'; return; } currentUser=user; const editId=new URLSearchParams(location.search).get('edit'); if(!editId) return; const {data}=await client.from('market_listings').select('*').eq('id',editId).single(); if(!data) return; const l=data; document.getElementById('f-id').value=l.id; document.getElementById('sellTitle').innerText='Edit Listing'; document.getElementById('f-platform').value=l.platform==='Twitter / X'?'X':l.platform; document.getElementById('f-country').value=l.country; document.getElementById('f-followers').value=l.followers; document.getElementById('f-age').value=l.account_age||''; document.getElementById('f-naira').value=l.price_naira; document.getElementById('f-usdt').value=l.price_usdt; document.getElementById('f-desc').value=stripContact(l.description||''); document.getElementById('f-verified').value=l.is_verified?'yes':'no'; document.getElementById('f-monetization').value=l.monetization_status||l.monetization||'Not specified'; document.getElementById('f-acc-user').value=l.account_username||''; document.getElementById('f-acc-pass').value=l.account_password||''; document.getElementById('f-acc-email').value=l.account_email||''; document.getElementById('f-acc-notes').value=stripContact(l.account_notes||''); if(l.has_2fa) document.getElementById('f-has-2fa').value=l.has_2fa; document.getElementById('f-otp-agree').checked=true; document.getElementById('f-bank-name').value=l.seller_bank_name||''; document.getElementById('f-account-number').value=l.seller_account_number||''; document.getElementById('f-account-name').value=l.seller_account_name||''; document.getElementById('f-usdt-wallet').value=l.seller_usdt_wallet||''; document.getElementById('f-usdt-network').value=l.seller_usdt_network||''; existingVideoUrl=l.video_url||""; if(existingVideoUrl){ document.getElementById('existingVideoBox').style.display='block'; document.getElementById('existingVideoLink').href=existingVideoUrl; } syncLoginFields(); })();
+</script>
+</body></html>
