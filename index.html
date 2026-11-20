@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PlugMarket</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.nav a{ display:inline-flex; align-items:center; gap:6px; }
+.nav a svg{ width:16px; height:16px; fill:currentColor; flex-shrink:0; }
+.nav a.sell-btn{background:#fff;color:#000;font-weight:800}
+.nav a.sell-btn svg{width:14px;height:14px}
+.nav a.dash-btn svg{ width:17px; height:17px; }
+.nav a.admin-btn{ color:#FFA502; background:rgba(255,165,2,.12); border:1px solid #FFA502; font-weight:800; }
+.nav a.admin-btn svg{ fill:#FFA502; }
+.page{ display:flex; flex-direction:column; gap:22px; }
+.section{ background:#151923; border:1px solid #2A2E3A; border-radius:16px; padding:20px; }
+.section-tight{ padding:16px 20px; }
+.hero-title{ font-size:32px; line-height:1.2; margin:0 0 10px; }
+.hero-green{ color:#00E676; }
+.filters{ display:flex; flex-wrap:wrap; gap:10px; }
+.filters button{display:inline-flex;align-items:center;gap:6px}
+.filters button svg{width:16px;height:16px;fill:currentColor}
+.tab-btn{display:inline-flex;align-items:center;gap:6px}
+.tab-btn svg{width:15px;height:15px;fill:currentColor}
+.user-chip{display:inline-flex;align-items:center;gap:7px}
+.user-chip svg{width:16px;height:16px;fill:#00E676;flex-shrink:0}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;fill:#9AA0B0}
+.search-wrap input{padding-left:38px !important; width:100%;}
+.social-title{ color:#00E676; font-size:22px; font-weight:900; margin:0 0 14px; display:flex; align-items:center; gap:9px; }
+.social-title svg{ width:24px; height:24px; fill:#00E676; }
+#grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:18px; margin-top:4px; }
+.card{ position:relative; overflow:hidden; }
+.verified{ position:absolute; top:10px; right:10px; z-index:5; background:#00E676; color:#000; font-size:11px; font-weight:800; padding:5px 10px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+.verified svg{ width:12px; height:12px; fill:#000; }
+.card .meta{ display:flex; flex-wrap:wrap; gap:6px; font-size:13px; color:#C7CBD6; margin:8px 0; }
+.card .meta .age{ color:#9AA0B0; }
+.modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:center; justify-content:center; z-index:999; padding:20px; }
+.modal-overlay.open{ display:flex; }
+.modal-box{ background:#151923; border:1px solid #2A2E3A; border-radius:16px; padding:22px; width:100%; max-width:360px; text-align:center; }
+.modal-box h3{ margin:0 0 8px; font-size:19px; }
+.modal-box p{ margin:0 0 18px; color:#9AA0B0; font-size:14px; }
+.modal-actions{ display:flex; gap:10px; }
+.modal-actions button{ flex:1; padding:12px; border-radius:10px; border:none; font-weight:800; cursor:pointer; font-size:14px; }
+.btn-cancel{ background:#1A1E2A; color:#fff; border:1px solid #2A2E3A !important; }
+.btn-confirm{ background:#E53935; color:#fff; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo" onclick="location.href='index.html'">
+    <svg width="34" height="34" viewBox="0 0 40 40" style="flex-shrink:0">
+      <circle cx="20" cy="20" r="18.5" fill="#11141D" stroke="#fff" stroke-width="1.8"/>
+      <rect x="15.2" y="7" width="2.6" height="6" rx="1.2" fill="#00E676"/>
+      <rect x="22.2" y="7" width="2.6" height="6" rx="1.2" fill="#00E676"/>
+      <path d="M12.5 15.5h15v6.5a5.5 5.5 0 0 1-5.5 5.5h-4a5.5 5.5 0 0 1-5.5-5.5v-6.5z" fill="#00E676"/>
+      <path d="M20 27.5v4c0 1.2-1 2-2 2" fill="none" stroke="#00E676" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+    <span>Plug</span>Market
+  </div>
+  <nav class="nav">
+    <a href="sell.html" class="sell-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Sell
+    </a>
+    <a href="dashboard.html" class="dash-btn">
+      <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      Dashboard
+    </a>
+    <a href="admin.html" id="nav-admin" class="admin-btn" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+      Admin
+    </a>
+  </nav>
+  <div style="display:flex;gap:8px">
+    <button class="hbtn green" id="authBtn" onclick="location.href='auth.html'">Login / Sign Up</button>
+    <button class="hbtn red" id="logoutBtn" onclick="showLogoutModal()" style="display:none">Logout</button>
+  </div>
+</div>
+
+<div class="page">
+  <section class="section">
+    <h1 class="hero-title">Buy and Sell <span class="hero-green">Social Accounts</span> on all Platforms</h1>
+    <p class="section-sub" id="userInfo" style="margin:0">
+      <span class="user-chip">
+        <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.7-9 6v1h18v-1c0-3.3-4-6-9-6z"/></svg>
+        <span id="userEmailText">Please login to use PlugMarket</span>
+      </span>
+    </p>
+  </section>
+
+  <section class="section section-tight">
+    <div style="display:flex;gap:10px">
+      <button id="tab-All" class="hbtn tab-btn" style="background:#fff;color:#000" onclick="setView('All')">
+        <svg viewBox="0 0 24 24"><path d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h12v2H3v-2z"/></svg> All
+      </button>
+      <button id="tab-Mine" class="hbtn dark tab-btn" onclick="setView('Mine')">
+        <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.7-9 6v1h18v-1c0-3.3-4-6-9-6z"/></svg> My Listings
+      </button>
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input id="search" placeholder="Search..." oninput="renderMarket()">
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="filters">
+      <button onclick="setFilter('All')" id="btn-All" class="active"><svg viewBox="0 0 24 24"><path d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h12v2H3v-2z"/></svg> All</button>
+      <button onclick="setFilter('TikTok')" id="btn-TikTok"><svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg> TikTok</button>
+      <button onclick="setFilter('Instagram')" id="btn-Instagram"><svg viewBox="0 0 24 24"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.23-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.7-4.92-4.92C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85C2.38 3.92 3.9 2.38 7.15 2.23 8.42 2.17 8.8 2.16 12 2.16zM12 0C8.74 0 8.33.01 7.05.07 2.7.27.27 2.69.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.2 4.36 2.62 6.78 6.98 6.98C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c4.35-.2 6.78-2.62 6.98-6.98.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95C23.73 2.7 21.31.27 16.95.07 15.67.01 15.26 0 12 0zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.15A4 4 0 1 1 16 12a4 4 0 0 1-4 3.99zm6.4-11.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44z"/></svg> Instagram</button>
+      <button onclick="setFilter('YouTube')" id="btn-YouTube"><svg viewBox="0 0 24 24"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.5A3.02 3.02 0 0 0 .5 6.19C0 8.07 0 12 0 12s0 3.93.5 5.81a3.02 3.02 0 0 0 2.12 2.14c1.88.5 9.38.5 9.38.5s7.5 0 9.38-.5a3.02 3.02 0 0 0 2.12-2.14C24 15.93 24 12 24 12s0-3.93-.5-5.81zM9.55 15.57V8.43L15.82 12l-6.27 3.57z"/></svg> YouTube</button>
+      <button onclick="setFilter('Facebook')" id="btn-Facebook"><svg viewBox="0 0 24 24"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.7 4.53-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.89v2.26h3.32l-.53 3.49h-2.79V24C19.61 23.09 24 18.1 24 12.07z"/></svg> Facebook</button>
+      <button onclick="setFilter('X')" id="btn-X"><svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> X</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <p id="status" style="color:#9AA0B0;margin:0 0 14px">Loading...</p>
+    <div id="grid"></div>
+  </section>
+</div>
+
+<div class="footer-bar">PlugMarket © 2026 - Secured Marketplace for Users</div>
+
+<div id="logoutModal" class="modal-overlay" onclick="if(event.target===this) hideLogoutModal()">
+  <div class="modal-box">
+    <h3>Logout?</h3>
+    <p>Are you sure you want to logout?</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="hideLogoutModal()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmLogout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+<script>
+let currentView = 'All';
+function showLogoutModal(){ document.getElementById('logoutModal').classList.add('open'); }
+function hideLogoutModal(){ document.getElementById('logoutModal').classList.remove('open'); }
+function confirmLogout(){ hideLogoutModal(); doLogout(); }
+function cleanDesc(t){
+  if(!t) return '';
+  const PHONE = /(\+?234[\s\-]?[789]\d{9}|0[789]\d{9}|\+?\d[\d\s\-]{7,}\d)/;
+  let out = t.split('\n').filter(line=>{
+    const l = line.toLowerCase();
+    if(l.includes('monetiz')) return true;
+    if(PHONE.test(line)) return false;
+    return !l.includes('contact') && !l.includes('whatsapp') && !l.includes('wa.me') && !l.includes('phone') && !l.includes('call me') && !l.includes('dm me') && !l.includes('telegram') && !l.includes('email me') && !l.includes('@gmail') && !l.includes('@yahoo') && !l.includes('@hotmail');
+  }).join(' ');
+  out = out.replace(/\+?234[\s\-]?[789]\d{9}/g,'').replace(/\b0[789]\d{9}\b/g,'').replace(/wa\.me\/\d+/gi,'');
+  return out.replace(/\s+/g,' ').trim();
+}
+function getAgeText(l){
+  const v = l.account_age || l.age || l.account_age_years || l.accountAge || '';
+  return v ? String(v) : 'Not specified';
+}
+function getMonetizationText(l){
+  const v = l.monetization_status ?? l.monetization ?? l.monetised ?? l.monetized ?? l.is_monetized ?? '';
+  if(v === true || String(v).toLowerCase() === 'true' || String(v).toLowerCase() === 'yes' || String(v).toLowerCase() === 'monetized') return 'Monetized';
+  if(v === false || String(v).toLowerCase() === 'false' || String(v).toLowerCase() === 'no' || String(v).toLowerCase() === 'not monetized') return 'Not Monetized';
+  if(v) return String(v);
+  const d = (l.description || '').toLowerCase();
+  if(d.includes('not monetized') || d.includes('not monetised')) return 'Not Monetized';
+  if(d.includes('monetized') || d.includes('monetised')) return 'Monetized';
+  return 'Not specified';
+}
+cardHTML = function(l){
+  const ageText = getAgeText(l);
+  const monText = getMonetizationText(l);
+  const safeDesc = cleanDesc(l.description);
+  const monColor = monText === 'Monetized' ? '#00E676' : '#9AA0B0';
+  return `<div class="card"><div class="card-top">${platformIcon(l.platform)}</div>
+  <div class="card-body"><span class="tag">${l.platform} | ${l.country}</span> ${l.is_verified?'<span class="verified">Live</span>':''}
+  <h3>${l.title}</h3><p class="desc">${safeDesc}</p>
+  <div class="meta"><span>${Number(l.followers).toLocaleString()} followers</span><span class="age">• Account Age: ${ageText}</span></div>
+  <div class="meta" style="margin-top:0"><span style="color:${monColor}">• Monetization: ${monText}</span></div>
+  <div class="footer"><div><div class="price">NGN ${Number(l.price_naira).toLocaleString()}</div><div class="usdt">$${l.price_usdt} USDT</div></div>
+  <button class="buy" onclick="location.href='checkout.html?id=${l.id}'">Buy Now &rarr;</button></div>
+  ${l.video_url?'<div style="font-size:11px;color:#00E676;margin-top:8px;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="#00E676"><path d="M8 5v14l11-7z"/></svg> Video Proof</div>':''}</div></div>`;
+};
+function updateAuthButtons(){
+  const authBtn = document.getElementById('authBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const adminLink = document.getElementById('nav-admin');
+  if(currentUser){
+    if(authBtn) authBtn.style.display = 'none';
+    if(logoutBtn) logoutBtn.style.display = 'inline-block';
+    if(adminLink) adminLink.style.display = isAdmin() ? 'inline-flex' : 'none';
+  } else {
+    if(authBtn) authBtn.style.display = 'inline-block';
+    if(logoutBtn) logoutBtn.style.display = 'none';
+    if(adminLink) adminLink.style.display = 'none';
+  }
+}
+function setView(v){
+  currentView = v;
+  const a = document.getElementById('tab-All');
+  const m = document.getElementById('tab-Mine');
+  if(v === 'All'){ a.style.background='#fff'; a.style.color='#000'; m.style.background='#1A1E2A'; m.style.color='#fff'; }
+  else {
+    m.style.background='#fff'; m.style.color='#000'; a.style.background='#1A1E2A'; a.style.color='#fff';
+    if(!currentUser){ alert('Please login first'); location.href='auth.html?next=index.html'; return; }
+  }
+  renderMarket();
+}
+renderMarket = function(){
+  updateAuthButtons();
+  const q = (document.getElementById('search')?.value || '').toLowerCase();
+  const live = allListings.filter(l => l.status === 'live');
+  const filtered = live.filter(l => {
+    const mf = activeFilter === 'All' || l.platform === activeFilter || (activeFilter === 'X' && l.platform === 'Twitter / X');
+    const ms = (l.title + ' ' + l.country + ' ' + l.platform + ' ' + cleanDesc(l.description)).toLowerCase().includes(q);
+    const mv = currentView === 'All' || (currentUser && String(l.seller_uid) === String(currentUser.id));
+    return mf && ms && mv;
+  });
+  const st = document.getElementById('status');
+  if(st) st.innerText = filtered.length + ' listings' + (currentView === 'Mine' ? ' - My Listings' : '');
+  const g = document.getElementById('grid');
+  if(g) g.innerHTML = filtered.map(cardHTML).join('') || '<p style="color:#aaa">No listings found.</p>';
+  const emailEl = document.getElementById('userEmailText');
+  if(emailEl) emailEl.innerText = currentUser && currentUser.email ? currentUser.email : 'Please login to buy';
+};
+loadListings('market');
+</script>
+</body>
+</html>
