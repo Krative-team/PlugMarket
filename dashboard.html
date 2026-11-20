@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard - PlugMarket</title><link rel="stylesheet" href="style.css">
+<style>
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:999;padding:16px}
+.modal-overlay.open{display:flex}
+.modal-box{background:#151923;border:1px solid #2A2E3A;border-radius:18px;width:100%;max-width:420px;padding:24px;text-align:center;animation:pop .2s ease}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-icon{width:64px;height:64px;border-radius:50%;background:#FF3B30;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.modal-icon svg{width:30px;height:30px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.modal-box h3{font-size:20px;margin:0 0 8px}
+#delAccountTitle{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal-box p{font-size:13px;color:#9AA0B0;line-height:1.6;margin:0 0 16px}
+.modal-box input{width:100%;padding:12px;border-radius:10px;border:1px solid #333;background:#0B0E14;color:#fff;text-align:center;font-weight:700;letter-spacing:2px;text-transform:uppercase;box-sizing:border-box}
+.modal-btns{display:flex;gap:10px;margin-top:16px}
+.modal-btns button{flex:1;padding:12px;border-radius:10px;border:none;font-weight:700;cursor:pointer;font-size:14px}
+.btn-cancel{background:#2A2E3A;color:#fff}
+.btn-delete{background:#FF3B30;color:#fff}
+.btn-delete:disabled{background:#5a1a1a;color:#888;cursor:not-allowed}
+.warn-box{background:#2a1515;border:1px solid #FF3B30;padding:12px;border-radius:10px;font-size:12px;color:#ffb3b3;line-height:1.5;text-align:left;margin-bottom:14px}
+.warn-box svg{width:14px;height:14px;vertical-align:middle;fill:none;stroke:#FF3B30;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<div class="page">
+<h1 style="font-size:32px">My Dashboard</h1>
+<p id="dashInfo" style="color:#9AA0B0"></p>
+<div id="dashStats" style="margin-top:16px"></div>
+<h2 class="section-title">My Listings</h2>
+<div id="dashGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px"></div>
+<div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap">
+<button class="submit danger" style="max-width:300px" onclick="openDeleteAccount()">Delete My Account</button>
+<button class="close" style="max-width:300px" onclick="location.href='index.html'">Back to Marketplace</button>
+</div>
+</div>
+
+<div id="delAccountModal" class="modal-overlay" onclick="if(event.target===this) closeModals()">
+  <div class="modal-box">
+    <div class="modal-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+    </div>
+    <h3 id="delAccountTitle">Delete Your Account?</h3>
+    <p>This is <b style="color:#fff">permanent</b> and cannot be undone.</p>
+    <div class="warn-box">
+      <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <b>What will be deleted:</b><br>
+      - All your listings<br>
+      - Your account &amp; login<br>
+      - Your dashboard history<br><br>
+      <b>Your sold deals / payouts are kept for records.</b>
+    </div>
+    <p style="margin-bottom:8px">Type <b style="color:#FF3B30">DELETE</b> to confirm:</p>
+    <input id="deleteConfirmInput" placeholder="Type DELETE" oninput="checkDeleteInput()">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+      <button id="confirmDeleteBtn" class="btn-delete" disabled onclick="doDeleteAccount()">Delete Forever</button>
+    </div>
+  </div>
+</div>
+
+<div id="delListingModal" class="modal-overlay" onclick="if(event.target===this) closeModals()">
+  <div class="modal-box">
+    <div class="modal-icon">
+      <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <h3>Delete This Listing?</h3>
+    <p id="delListingText">This listing will be removed from the marketplace permanently. Buyers will no longer see it.</p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModals()">Keep Listing</button>
+      <button class="btn-delete" onclick="doDeleteListing()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+<script>
+let pendingDeleteId = null;
+
+function closeModals(){
+  document.getElementById('delAccountModal').classList.remove('open');
+  document.getElementById('delListingModal').classList.remove('open');
+  document.getElementById('deleteConfirmInput').value='';
+  document.getElementById('confirmDeleteBtn').disabled=true;
+}
+function openDeleteAccount(){
+  if(!currentUser) return;
+  document.getElementById('delAccountTitle').innerText = "Delete '" + currentUser.email + "'?";
+  document.getElementById('delAccountModal').classList.add('open');
+  setTimeout(()=>document.getElementById('deleteConfirmInput').focus(),100);
+}
+function checkDeleteInput(){
+  const v=document.getElementById('deleteConfirmInput').value.trim().toUpperCase();
+  document.getElementById('confirmDeleteBtn').disabled = (v!=="DELETE");
+}
+async function doDeleteAccount(){
+  if(!currentUser) return;
+  document.getElementById('confirmDeleteBtn').innerText="Deleting...";
+  await client.from('market_listings').delete().eq('seller_uid',currentUser.id);
+  try{ await fetch("https://pfrpgijjqajwuhyfcdgw.supabase.co/functions/v1/delete-user",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer sb_publishable_XCDG8j8Te4UHw_qw8yOnJA_hThHuRdT"},body:JSON.stringify({user_id:currentUser.id})}); }catch(e){}
+  await client.auth.signOut();
+  alert("Account deleted.");
+  location.href='index.html';
+}
+function deleteDash(id, title){
+  pendingDeleteId=id;
+  document.getElementById('delListingText').innerHTML="Delete <b style='color:#fff'>"+(title||"this listing")+"</b>?<br><br>This will be removed from the marketplace permanently.";
+  document.getElementById('delListingModal').classList.add('open');
+}
+async function doDeleteListing(){
+  if(!pendingDeleteId) return;
+  await client.from('market_listings').delete().eq('id',pendingDeleteId);
+  location.reload();
+}
+(async()=>{ getClient(); const {data:{user}}=await client.auth.getUser(); if(!user){ location.href='auth.html?next=dashboard.html'; return; } currentUser=user; document.getElementById('dashInfo').innerText=currentUser.email+(isAdmin()?" (ADMIN)":"");
+const {data}=await client.from('market_listings').select('*').eq('seller_uid',user.id).order('created_at',{ascending:false}); const mine=data||[];
+const pending=mine.filter(l=>l.status==='pending').length; const liveList=mine.filter(l=>l.status==='live'); const live=liveList.length;
+const totalVal=liveList.reduce((s,l)=>s+(Number(l.price_naira)||0),0);
+const totalUsdt=liveList.reduce((s,l)=>s+(Number(l.price_usdt)||0),0);
+document.getElementById('dashStats').innerHTML=`<div style="background:#151923;border:1px solid #2A2E3A;padding:16px;border-radius:14px">Listings: <b>${mine.length}</b> | Live: <b style="color:#00E676">${live}</b> | Pending: <b style="color:#FFA502">${pending}</b><br>Total Value: <b>NGN ${totalVal.toLocaleString()} [${totalUsdt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} USDT]</b><br><small style="color:#9AA0B0">Total Value = approved (live) listings only. Pending = PlugMarket must verify login before listing goes live.</small></div><button class="big-btn white" style="margin-top:14px" onclick="location.href='sell.html'">+ New Listing</button>`;
+document.getElementById('dashGrid').innerHTML=mine.map(l=>`<div class="card"><div class="card-body"><span class="tag">${l.platform} | ${l.country}</span> <span style="font-size:11px;padding:4px 8px;border-radius:20px;background:${l.status==='pending'?'#FFA502':l.status==='live'?'#00E676':'#333'};color:#000;font-weight:700">${(l.status||'live').toUpperCase()}</span><h3>${l.title}</h3><p class="desc">${l.description||''}</p><div style="font-weight:900">NGN ${Number(l.price_naira).toLocaleString()} ($${l.price_usdt})</div><div style="display:flex;gap:6px;margin-top:10px"><button class="small edit" onclick="location.href='sell.html?edit=${l.id}'">Edit</button><button class="small del" onclick="deleteDash(${l.id}, '${(l.title||'').replace(/'/g,"")}')">Delete</button>${l.status==='live'?`<button class="small verify" onclick="location.href='checkout.html?id=${l.id}'">View</button>`:''}</div></div></div>`).join('')||'<p style="color:#aaa">No listings yet.</p>';
+})();
+</script>
+</body></html>
