@@ -111,6 +111,8 @@ function closeModals(){
   document.getElementById('delListingModal').classList.remove('open');
   document.getElementById('deleteConfirmInput').value='';
   document.getElementById('confirmDeleteBtn').disabled=true;
+  const b = document.getElementById('confirmDeleteBtn');
+  if(b) b.innerText = "Delete Forever";
 }
 function openDeleteAccount(){
   if(!currentUser) return;
@@ -124,12 +126,30 @@ function checkDeleteInput(){
 }
 async function doDeleteAccount(){
   if(!currentUser) return;
-  document.getElementById('confirmDeleteBtn').innerText="Deleting...";
-  await client.from('market_listings').delete().eq('seller_uid',currentUser.id);
-  try{ await fetch("https://pfrpgijjqajwuhyfcdgw.supabase.co/functions/v1/delete-user",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer sb_publishable_XCDG8j8Te4UHw_qw8yOnJA_hThHuRdT"},body:JSON.stringify({user_id:currentUser.id})}); }catch(e){}
-  await client.auth.signOut();
-  alert("Account deleted.");
-  location.href='index.html';
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = true;
+  btn.innerText = "Deleting...";
+  try {
+    getClient();
+    // NO Edge Function - uses normal database RPC, same connection as listings
+    const { data, error } = await client.rpc('delete_my_account');
+    console.log("delete_my_account:", data, error);
+    if (error) {
+      alert("Delete failed: " + error.message);
+      btn.disabled = false; btn.innerText = "Delete Forever"; return;
+    }
+    if (data && data.success === false) {
+      alert("Delete failed: " + (data.error || "Unknown error"));
+      btn.disabled = false; btn.innerText = "Delete Forever"; return;
+    }
+    await client.auth.signOut();
+    alert("Account deleted permanently.");
+    location.href = 'index.html';
+  } catch(e){
+    console.error(e);
+    alert("Delete Error: " + e.message);
+    btn.disabled = false; btn.innerText = "Delete Forever";
+  }
 }
 function deleteDash(id, title){
   pendingDeleteId=id;
@@ -141,7 +161,6 @@ async function doDeleteListing(){
   await client.from('market_listings').delete().eq('id',pendingDeleteId).eq('seller_uid', currentUser.id);
   location.reload();
 }
-// --- Bell Notifications ---
 let bellOpen = false;
 function toggleBell(e){
   e.stopPropagation();
