@@ -20,11 +20,39 @@
 .btn-delete:disabled{background:#5a1a1a;color:#888;cursor:not-allowed}
 .warn-box{background:#2a1515;border:1px solid #FF3B30;padding:12px;border-radius:10px;font-size:12px;color:#ffb3b3;line-height:1.5;text-align:left;margin-bottom:14px}
 .warn-box svg{width:14px;height:14px;vertical-align:middle;fill:none;stroke:#FF3B30;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dash-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.bell-wrap{position:relative}
+.bell-btn{width:44px;height:44px;border-radius:50%;background:#151923;border:1px solid #2A2E3A;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.bell-btn svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bell-badge{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:#FF3B30;color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;border:2px solid #0B0E14}
+.bell-badge.show{display:flex}
+.bell-drop{position:absolute;right:0;top:52px;width:320px;max-width:88vw;background:#151923;border:1px solid #2A2E3A;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.5);display:none;overflow:hidden;z-index:100}
+.bell-drop.open{display:block}
+.bell-drop-head{padding:14px 16px;border-bottom:1px solid #2A2E3A;display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:14px}
+.bell-drop-head button{background:none;border:none;color:#00E676;font-weight:700;cursor:pointer;font-size:12px}
+.bell-item{padding:12px 16px;border-bottom:1px solid #222631;cursor:pointer;text-align:left}
+.bell-item:last-child{border-bottom:none}
+.bell-item b{font-size:13px;display:block}
+.bell-item span{font-size:12px;color:#9AA0B0;line-height:1.4;display:block;margin-top:2px}
+.bell-item.unread{background:rgba(0,230,118,.06)}
+.bell-empty{padding:20px;text-align:center;color:#9AA0B0;font-size:13px}
 </style>
 </head>
 <body>
 <div class="page">
-<h1 style="font-size:32px">My Dashboard</h1>
+<div class="dash-header">
+  <h1 style="font-size:32px;margin:0">My Dashboard</h1>
+  <div class="bell-wrap">
+    <button class="bell-btn" id="bellBtn" onclick="toggleBell(event)" aria-label="Notifications">
+      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="bell-badge" id="bellBadge">0</span>
+    </button>
+    <div class="bell-drop" id="bellDrop">
+      <div class="bell-drop-head"><span>Notifications</span><button onclick="markAllRead()">Mark all read</button></div>
+      <div id="bellList"><div class="bell-empty">Loading...</div></div>
+    </div>
+  </div>
+</div>
 <p id="dashInfo" style="color:#9AA0B0"></p>
 <div id="dashStats" style="margin-top:16px"></div>
 <h2 class="section-title">My Listings</h2>
@@ -109,17 +137,59 @@ function deleteDash(id, title){
   document.getElementById('delListingModal').classList.add('open');
 }
 async function doDeleteListing(){
-  if(!pendingDeleteId) return;
-  await client.from('market_listings').delete().eq('id',pendingDeleteId);
+  if(!pendingDeleteId || !currentUser) return;
+  await client.from('market_listings').delete().eq('id',pendingDeleteId).eq('seller_uid', currentUser.id);
   location.reload();
 }
-(async()=>{ getClient(); const {data:{user}}=await client.auth.getUser(); if(!user){ location.href='auth.html?next=dashboard.html'; return; } currentUser=user; document.getElementById('dashInfo').innerText=currentUser.email+(isAdmin()?" (ADMIN)":"");
+// --- Bell Notifications ---
+let bellOpen = false;
+function toggleBell(e){
+  e.stopPropagation();
+  bellOpen = !bellOpen;
+  document.getElementById('bellDrop').classList.toggle('open', bellOpen);
+  if(bellOpen) loadNotifications();
+}
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.bell-wrap')){
+    document.getElementById('bellDrop').classList.remove('open');
+    bellOpen = false;
+  }
+});
+async function loadNotifications(){
+  if(!currentUser) return;
+  const { data } = await client.from('notifications').select('*').eq('user_id', currentUser.id).order('created_at', {ascending:false}).limit(20);
+  const list = data || [];
+  const unread = list.filter(n => !n.is_read).length;
+  const badge = document.getElementById('bellBadge');
+  badge.innerText = unread > 9 ? '9+' : unread;
+  badge.classList.toggle('show', unread > 0);
+  document.getElementById('bellList').innerHTML = list.length ? list.map(n => `
+    <div class="bell-item ${!n.is_read ? 'unread' : ''}" onclick="openNotif(${n.id}, ${n.order_id || 'null'})">
+      <b>${n.title}</b>
+      <span>${n.body || ''}</span>
+      <span style="font-size:11px;color:#666">${new Date(n.created_at).toLocaleString()}</span>
+    </div>
+  `).join('') : '<div class="bell-empty">No notifications yet.</div>';
+}
+async function openNotif(id, orderId){
+  await client.from('notifications').update({is_read:true}).eq('id', id);
+  loadNotifications();
+  if(orderId) alert("Order #" + orderId + " - Buyer paid. Check your email for details.");
+}
+async function markAllRead(){
+  if(!currentUser) return;
+  await client.from('notifications').update({is_read:true}).eq('user_id', currentUser.id).eq('is_read', false);
+  loadNotifications();
+}
+setInterval(()=>{ if(currentUser) loadNotifications(); }, 30000);
+
+(async()=>{ getClient(); const {data:{user}}=await client.auth.getUser(); if(!user){ location.href='auth.html?next=dashboard.html'; return; } currentUser=user; loadNotifications(); document.getElementById('dashInfo').innerText=currentUser.email+(isAdmin()?" (ADMIN)":"");
 const {data}=await client.from('market_listings').select('*').eq('seller_uid',user.id).order('created_at',{ascending:false}); const mine=data||[];
 const pending=mine.filter(l=>l.status==='pending').length; const liveList=mine.filter(l=>l.status==='live'); const live=liveList.length;
 const totalVal=liveList.reduce((s,l)=>s+(Number(l.price_naira)||0),0);
 const totalUsdt=liveList.reduce((s,l)=>s+(Number(l.price_usdt)||0),0);
-document.getElementById('dashStats').innerHTML=`<div style="background:#151923;border:1px solid #2A2E3A;padding:16px;border-radius:14px">Listings: <b>${mine.length}</b> | Live: <b style="color:#00E676">${live}</b> | Pending: <b style="color:#FFA502">${pending}</b><br>Total Value: <b>NGN ${totalVal.toLocaleString()} [${totalUsdt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} USDT]</b><br><small style="color:#9AA0B0">Total Value = approved (live) listings only. Pending = PlugMarket must verify login before listing goes live.</small></div><button class="big-btn white" style="margin-top:14px" onclick="location.href='sell.html'">+ New Listing</button>`;
-document.getElementById('dashGrid').innerHTML=mine.map(l=>`<div class="card"><div class="card-body"><span class="tag">${l.platform} | ${l.country}</span> <span style="font-size:11px;padding:4px 8px;border-radius:20px;background:${l.status==='pending'?'#FFA502':l.status==='live'?'#00E676':'#333'};color:#000;font-weight:700">${(l.status||'live').toUpperCase()}</span><h3>${l.title}</h3><p class="desc">${l.description||''}</p><div style="font-weight:900">NGN ${Number(l.price_naira).toLocaleString()} ($${l.price_usdt})</div><div style="display:flex;gap:6px;margin-top:10px"><button class="small edit" onclick="location.href='sell.html?edit=${l.id}'">Edit</button><button class="small del" onclick="deleteDash(${l.id}, '${(l.title||'').replace(/'/g,"")}')">Delete</button>${l.status==='live'?`<button class="small verify" onclick="location.href='checkout.html?id=${l.id}'">View</button>`:''}</div></div></div>`).join('')||'<p style="color:#aaa">No listings yet.</p>';
+document.getElementById('dashStats').innerHTML=`<div style="background:#151923;border:1px solid #2A2E3A;padding:16px;border-radius:14px">Listings: <b>${mine.length}</b> | Live: <b style="color:#00E676">${live}</b> | Pending: <b style="color:#FFA502">${pending}</b><br>Total Value: <b>NGN ${totalVal.toLocaleString()} [${totalUsdt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} USDT]</b><br><small style="color:#9AA0B0">Total Value = approved (live) listings only. Pending = PlugMarket must verify a listing before it goes live.</small></div><button class="big-btn white" style="margin-top:14px" onclick="location.href='sell.html'">+ New Listing</button>`;
+document.getElementById('dashGrid').innerHTML=mine.map(l=>`<div class="card"><div class="card-body"><span class="tag">${l.platform} | ${l.country}</span> <span style="font-size:11px;padding:4px 8px;border-radius:20px;background:${l.status==='pending'?'#FFA502':l.status==='live'?'#00E676':'#333'};color:#000;font-weight:700">${(l.status||'live').toUpperCase()}</span><h3>${l.title}</h3><p class="desc">${l.description||''}</p><div style="font-weight:900">NGN ${Number(l.price_naira).toLocaleString()} ($${l.price_usdt})</div><div style="display:flex;gap:6px;margin-top:10px"><button class="small del" onclick="deleteDash(${l.id}, '${(l.title||'').replace(/'/g,"")}')">Delete</button>${l.status==='live'?`<button class="small verify" onclick="location.href='checkout.html?id=${l.id}'">View</button>`:''}</div></div></div>`).join('')||'<p style="color:#aaa">No listings yet.</p>';
 })();
 </script>
 </body></html>
