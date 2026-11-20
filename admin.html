@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin - PlugMarket</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div class="page">
+<div class="admin-box"><h3>Admin Panel - Buyer Protection ON</h3><p style="font-size:13px;color:#9AA0B0">PENDING = test login first, then Approve.<br>LIVE = visible to buyers.</p>
+<div class="admin-stats"><div class="stat"><b id="adminCount">0</b><span>Live Listings</span></div><div class="stat"><b id="adminPending">0</b><span>Pending Approval</span></div><div class="stat"><b id="adminValue">NGN 0</b><span>Total Value</span></div><div class="stat"><b id="adminFees" style="color:#00E676">NGN 0</b><span>PlugMarket Fees (15%)</span></div></div></div>
+<input id="adminSearch" placeholder="Search admin..." oninput="renderAdminTable()" style="margin-bottom:12px">
+<div style="overflow:auto"><table class="admin-table"><thead><tr><th>Listing</th><th>Status</th><th>Split</th><th>Payout</th><th>Actions</th></tr></thead><tbody id="adminTableBody"></tbody></table></div>
+<div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+<button class="close" onclick="location.href='index.html'">Close</button>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+<script>
+const calcFee=p=>Math.round(Number(p||0)*15/100); const calcSellerShare=p=>Number(p||0)-calcFee(p);
+function renderAdminTable(){
+  const q=(document.getElementById('adminSearch')?.value||'').toLowerCase();
+  const filtered=allListings.filter(l=>(l.title+' '+l.platform+' '+l.country+' '+(l.description||'')).toLowerCase().includes(q));
+  const live=allListings.filter(l=>l.status==='live');
+  document.getElementById('adminCount').innerText=live.length;
+  document.getElementById('adminPending').innerText=allListings.filter(l=>l.status==='pending').length;
+  document.getElementById('adminValue').innerText="NGN "+live.reduce((s,l)=>s+(Number(l.price_naira)||0),0).toLocaleString();
+  document.getElementById('adminFees').innerText="NGN "+live.reduce((s,l)=>s+calcFee(l.price_naira),0).toLocaleString();
+  document.getElementById('adminTableBody').innerHTML=filtered.map(l=>`<tr><td><b>${l.title}</b><br><span style="color:#9AA0B0">${l.platform} | ${l.country} | ${Number(l.followers).toLocaleString()}</span><br><span style="font-size:12px">Login: ${l.account_username||'-'} / ${l.account_password||'-'}</span><br>${l.video_url?`<a href="${l.video_url}" target="_blank" style="color:#00E676;font-size:12px">Watch Video</a>`:`<span style="color:#E53935;font-size:12px">NO VIDEO</span>`}</td><td><span style="padding:4px 8px;border-radius:20px;background:${l.status==='pending'?'#FFA502':l.status==='live'?'#00E676':'#333'};color:#000;font-weight:700;font-size:11px">${(l.status||'live').toUpperCase()}</span></td><td>NGN ${Number(l.price_naira).toLocaleString()}<br>Seller 85%: NGN ${calcSellerShare(l.price_naira).toLocaleString()}<br>Fee 15%: <b style="color:#00E676">NGN ${calcFee(l.price_naira).toLocaleString()}</b></td><td style="font-size:12px">${l.seller_bank_name||'-'} ${l.seller_account_number||''}<br>${l.seller_usdt_wallet||'-'}</td><td><div style="display:flex;gap:6px;flex-wrap:wrap">${l.status==='pending'?`<button class="small approve" onclick="approveListing(${l.id})">Approve</button><button class="small reject" onclick="rejectListing(${l.id})">Reject</button>`:''}<button class="small verify" onclick="toggleVerify(${l.id},${l.is_verified?'false':'true'})">${l.is_verified?'Unverify':'Verify'}</button><button class="small edit" onclick="location.href='sell.html?edit=${l.id}'">Edit</button><button class="small del" onclick="deleteAdmin(${l.id})">Delete</button></div></td></tr>`).join('')||'<tr><td colspan="5">No listings.</td></tr>';
+}
+async function approveListing(id){ if(!confirm("Did you TEST this login and it WORKS?")) return; await client.from('market_listings').update({status:'live',is_verified:true}).eq('id',id); await loadListings('admin'); renderAdminTable(); }
+async function rejectListing(id){ if(!confirm("Reject this listing?")) return; await client.from('market_listings').update({status:'rejected'}).eq('id',id); await loadListings('admin'); renderAdminTable(); }
+async function toggleVerify(id,v){ await client.from('market_listings').update({is_verified:v}).eq('id',id); await loadListings('admin'); renderAdminTable(); }
+async function deleteAdmin(id){ if(!confirm("Delete this listing?")) return; await client.from('market_listings').delete().eq('id',id); await loadListings('admin'); renderAdminTable(); }
+(async()=>{ getClient(); const {data:{user}}=await client.auth.getUser(); if(!user){ location.href='auth.html?next=admin.html'; return; } currentUser=user; if(!isAdmin()){ alert('Access denied.'); location.href='index.html'; return; } await loadListings('admin'); renderAdminTable(); })();
+</script>
+</body></html>
