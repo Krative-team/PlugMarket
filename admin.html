@@ -4,32 +4,133 @@
 <title>Admin - PlugMarket</title><link rel="stylesheet" href="style.css"></head>
 <body>
 <div class="page">
-<div class="admin-box"><h3>Admin Panel - Buyer Protection ON</h3><p style="font-size:13px;color:#9AA0B0">PENDING = test login first, then Approve.<br>LIVE = visible to buyers.</p>
+<div class="admin-box"><h3>Admin Panel - Buyer Protection ON</h3><p style="font-size:13px;color:#9AA0B0">PENDING = test login first, then Approve.<br>LIVE = visible to buyers.<br>Payment Held alerts are <b style="color:#00E676">100% AUTOMATIC</b> - Admin does NOT send them.</p>
 <div class="admin-stats"><div class="stat"><b id="adminCount">0</b><span>Live Listings</span></div><div class="stat"><b id="adminPending">0</b><span>Pending Approval</span></div><div class="stat"><b id="adminValue">NGN 0</b><span>Total Value</span></div><div class="stat"><b id="adminFees" style="color:#00E676">NGN 0</b><span>PlugMarket Fees (15%)</span></div></div></div>
-<input id="adminSearch" placeholder="Search admin..." oninput="renderAdminTable()" style="margin-bottom:12px">
+
+<div id="adminDebug" style="display:none;margin-top:12px;background:#0f2a1a;border:1px solid #00E676;border-radius:12px;padding:12px;font-size:12px;line-height:1.6;color:#fff"></div>
+
+<div class="admin-box" style="margin-top:12px"><h3 style="margin:0">Payment Held - Auto Alerts</h3><p style="font-size:12px;color:#9AA0B0;margin:6px 0">Triggered automatically by Supabase when order becomes <b>paid_held</b>. No Admin action needed.</p>
+<div id="autoAlertBox" style="font-size:13px">Loading orders...</div>
+<button class="close" onclick="loadAutoAlerts()" style="margin-top:8px">Refresh Alerts</button>
+</div>
+
+<input id="adminSearch" placeholder="Search admin..." oninput="renderAdminTable()" style="margin-bottom:12px;margin-top:12px">
 <div style="overflow:auto"><table class="admin-table"><thead><tr><th>Listing</th><th>Status</th><th>Split</th><th>Payout</th><th>Actions</th></tr></thead><tbody id="adminTableBody"></tbody></table></div>
 <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
 <button class="close" onclick="location.href='index.html'">Close</button>
+<button class="close" onclick="loadAdminListings()">Refresh Listings</button>
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 <script>
-const calcFee=p=>Math.round(Number(p||0)*15/100); const calcSellerShare=p=>Number(p||0)-calcFee(p);
+const calcFee=p=>Math.round(Number(p||0)*15/100);
+const calcSellerShare=p=>Number(p||0)-calcFee(p);
+
+function twofaBadge(l){
+  if(l.has_2fa==='linked_email') return `<span style="padding:3px 8px;border-radius:20px;background:#00BFFF;color:#000;font-weight:700;font-size:11px">WITH LINKED EMAIL</span>`;
+  if(l.has_2fa==='2fa_off') return `<span style="padding:3px 8px;border-radius:20px;background:#00E676;color:#000;font-weight:700;font-size:11px">2FA OFF</span>`;
+  return `<span style="padding:3px 8px;border-radius:20px;background:#E53935;color:#fff;font-weight:700;font-size:11px">OLD - CHECK 2FA</span>`;
+}
+
+function showDebug(html, isError){
+  const d=document.getElementById('adminDebug');
+  d.style.display='block';
+  d.style.background = isError ? '#2a1515' : '#0f2a1a';
+  d.style.borderColor = isError ? '#FF3B30' : '#00E676';
+  d.innerHTML=html;
+}
+
+async function loadAdminListings(){
+  try{
+    const {data, error} = await client.from('market_listings').select('*').order('created_at',{ascending:false});
+    if(error) throw error;
+    allListings = data || [];
+    console.log('ADMIN LOADED DIRECT:', allListings.length, allListings);
+    if(allListings.length===0){
+      showDebug(`<b style="color:#FFA502">Query worked but returned 0 rows.</b><br>RLS is still blocking.`, true);
+    } else {
+      const counts={};
+      allListings.forEach(l=>{ const s=l.status||'(null)'; counts[s]=(counts[s]||0)+1; });
+      showDebug(`<b style="color:#00E676">Loaded ${allListings.length} listings direct from DB (no Edge Function).</b><br>Breakdown: ${Object.entries(counts).map(([k,v])=>k+': '+v).join(' | ')}`, false);
+    }
+    renderAdminTable();
+  }catch(e){
+    console.error('ADMIN DIRECT ERROR:', e);
+    showDebug(`<b style="color:#FF3B30">Direct query failed:</b> ${e.message}`, true);
+    allListings = [];
+    renderAdminTable();
+  }
+}
+
+function getMonetizationTextAdmin(l){
+  const v = l.monetization_status ?? l.monetization ?? '';
+  if(!v || String(v).toLowerCase()==='off') return '';
+  return String(v);
+}
+
 function renderAdminTable(){
   const q=(document.getElementById('adminSearch')?.value||'').toLowerCase();
-  const filtered=allListings.filter(l=>(l.title+' '+l.platform+' '+l.country+' '+(l.description||'')).toLowerCase().includes(q));
+  const filtered=allListings.filter(l=>((l.title||'')+' '+(l.platform||'')+' '+(l.country||'')+' '+((l.description||''))).toLowerCase().includes(q));
   const live=allListings.filter(l=>l.status==='live');
   document.getElementById('adminCount').innerText=live.length;
-  document.getElementById('adminPending').innerText=allListings.filter(l=>l.status==='pending').length;
+  document.getElementById('adminPending').innerText=allListings.filter(l=>l.status==='pending' || !l.status).length;
   document.getElementById('adminValue').innerText="NGN "+live.reduce((s,l)=>s+(Number(l.price_naira)||0),0).toLocaleString();
   document.getElementById('adminFees').innerText="NGN "+live.reduce((s,l)=>s+calcFee(l.price_naira),0).toLocaleString();
-  document.getElementById('adminTableBody').innerHTML=filtered.map(l=>`<tr><td><b>${l.title}</b><br><span style="color:#9AA0B0">${l.platform} | ${l.country} | ${Number(l.followers).toLocaleString()}</span><br><span style="font-size:12px">Login: ${l.account_username||'-'} / ${l.account_password||'-'}</span><br>${l.video_url?`<a href="${l.video_url}" target="_blank" style="color:#00E676;font-size:12px">Watch Video</a>`:`<span style="color:#E53935;font-size:12px">NO VIDEO</span>`}</td><td><span style="padding:4px 8px;border-radius:20px;background:${l.status==='pending'?'#FFA502':l.status==='live'?'#00E676':'#333'};color:#000;font-weight:700;font-size:11px">${(l.status||'live').toUpperCase()}</span></td><td>NGN ${Number(l.price_naira).toLocaleString()}<br>Seller 85%: NGN ${calcSellerShare(l.price_naira).toLocaleString()}<br>Fee 15%: <b style="color:#00E676">NGN ${calcFee(l.price_naira).toLocaleString()}</b></td><td style="font-size:12px">${l.seller_bank_name||'-'} ${l.seller_account_number||''}<br>${l.seller_usdt_wallet||'-'}</td><td><div style="display:flex;gap:6px;flex-wrap:wrap">${l.status==='pending'?`<button class="small approve" onclick="approveListing(${l.id})">Approve</button><button class="small reject" onclick="rejectListing(${l.id})">Reject</button>`:''}<button class="small verify" onclick="toggleVerify(${l.id},${l.is_verified?'false':'true'})">${l.is_verified?'Unverify':'Verify'}</button><button class="small edit" onclick="location.href='sell.html?edit=${l.id}'">Edit</button><button class="small del" onclick="deleteAdmin(${l.id})">Delete</button></div></td></tr>`).join('')||'<tr><td colspan="5">No listings.</td></tr>';
+  document.getElementById('adminTableBody').innerHTML=filtered.map(l=>{
+    const mon = getMonetizationTextAdmin(l);
+    return `<tr><td><b>${l.title||'(no title)'}</b><br><span style="color:#9AA0B0">${l.platform||''} | ${l.country||''} | ${Number(l.followers||0).toLocaleString()} followers</span><br>${twofaBadge(l)}${mon ? `<br><span style="font-size:12px;color:#FFA502">Monetization: ${mon}</span>` : ''}<br><span style="font-size:12px">Login: ${l.account_username||'-'} / ${l.account_password||'-'}</span><br>${l.video_url?`<a href="${l.video_url}" target="_blank" style="color:#00E676;font-size:12px">Watch Video</a>`:`<span style="color:#E53935;font-size:12px">NO VIDEO</span>`}</td><td><span style="padding:4px 8px;border-radius:20px;background:${l.status==='pending'||!l.status?'#FFA502':l.status==='live'?'#00E676':'#333'};color:#000;font-weight:700;font-size:11px">${(l.status||'PENDING').toUpperCase()}</span></td><td>NGN ${Number(l.price_naira||0).toLocaleString()}<br>Seller 85%: NGN ${calcSellerShare(l.price_naira).toLocaleString()}<br>Fee 15%: <b style="color:#00E676">NGN ${calcFee(l.price_naira).toLocaleString()}</b></td><td style="font-size:12px">${l.seller_bank_name||'-'} ${l.seller_account_number||''}<br>${l.seller_usdt_wallet||'-'}</td><td><div style="display:flex;gap:6px;flex-wrap:wrap">${(l.status==='pending'||!l.status)?`<button class="small approve" onclick="approveListing(${l.id})">Approve</button><button class="small reject" onclick="rejectListing(${l.id})">Reject</button>`:''}<button class="small verify" onclick="toggleVerify(${l.id},${l.is_verified?'false':'true'})">${l.is_verified?'Unverify':'Verify'}</button><button class="small edit" onclick="location.href='sell.html?edit=${l.id}'">Edit</button><button class="small del" onclick="deleteAdmin(${l.id})">Delete</button></div></td></tr>`
+  }).join('')||'<tr><td colspan="5">No listings.</td></tr>';
 }
-async function approveListing(id){ if(!confirm("Did you TEST this login and it WORKS?")) return; await client.from('market_listings').update({status:'live',is_verified:true}).eq('id',id); await loadListings('admin'); renderAdminTable(); }
-async function rejectListing(id){ if(!confirm("Reject this listing?")) return; await client.from('market_listings').update({status:'rejected'}).eq('id',id); await loadListings('admin'); renderAdminTable(); }
-async function toggleVerify(id,v){ await client.from('market_listings').update({is_verified:v}).eq('id',id); await loadListings('admin'); renderAdminTable(); }
-async function deleteAdmin(id){ if(!confirm("Delete this listing?")) return; await client.from('market_listings').delete().eq('id',id); await loadListings('admin'); renderAdminTable(); }
-(async()=>{ getClient(); const {data:{user}}=await client.auth.getUser(); if(!user){ location.href='auth.html?next=admin.html'; return; } currentUser=user; if(!isAdmin()){ alert('Access denied.'); location.href='index.html'; return; } await loadListings('admin'); renderAdminTable(); })();
+
+async function loadAutoAlerts(){
+  const box=document.getElementById('autoAlertBox'); if(!box) return;
+  try{
+    const {data,error} = await client.from('orders').select('id,listing_id,amount_naira,status,notified_seller,created_at').order('created_at',{ascending:false}).limit(20);
+    if(error) throw error;
+    if(!data || !data.length){ box.innerHTML=`<span style="color:#9AA0B0">No paid orders yet. When buyer pays, it will appear here automatically.</span>`; return; }
+    box.innerHTML=data.map(o=>`<div style="border-bottom:1px solid #222;padding:8px 0">Order #${o.id} • Listing #${o.listing_id} • ₦${Number(o.amount_naira||0).toLocaleString()} • Status: <b>${o.status}</b> • Alert: ${o.notified_seller?'<b style="color:#00E676">Sent Automatically</b>':'<span style="color:#FFA502">Waiting for paid_held</span>'}<br><span style="color:#9AA0B0;font-size:11px">${new Date(o.created_at).toLocaleString()}</span></div>`).join('');
+  }catch(e){ box.innerHTML=`<span style="color:#FFA502">Orders table not yet created or RLS blocks admin read. Error: ${e.message}</span>`; }
+}
+
+async function approveListing(id){
+  if(!confirm("Did you TEST this login and it WORKS?")) return;
+  const {error}=await client.from('market_listings').update({status:'live',is_verified:true}).eq('id',id);
+  if(error){ alert("Approve failed: "+error.message); return; }
+  await loadAdminListings();
+}
+async function rejectListing(id){
+  if(!confirm("Reject this listing?")) return;
+  const {error}=await client.from('market_listings').update({status:'rejected'}).eq('id',id);
+  if(error){ alert("Reject failed: "+error.message); return; }
+  await loadAdminListings();
+}
+async function toggleVerify(id,v){
+  const {error}=await client.from('market_listings').update({is_verified:v}).eq('id',id);
+  if(error){ alert("Verify failed: "+error.message); return; }
+  await loadAdminListings();
+}
+async function deleteAdmin(id){
+  if(!confirm("Delete this listing?")) return;
+  const {error}=await client.from('market_listings').delete().eq('id',id);
+  if(error){ alert("Delete failed: "+error.message); return; }
+  await loadAdminListings();
+}
+
+(async()=>{
+  getClient();
+  const {data:{user}}=await client.auth.getUser();
+  if(!user){ location.href='auth.html?next=admin.html'; return; }
+  currentUser=user;
+  console.log('ADMIN LOGGED IN AS:', user.email);
+  if(!isAdmin()){
+    alert('Access denied. Logged in as '+user.email+' - expected etoabasis@gmail.com');
+    location.href='index.html'; return;
+  }
+  // *** PATCH IS HERE - switch to anon client for data, like Test 2 ***
+  client = window.supabase.createClient("https://pfrpgijjqajwuhyfcdgw.supabase.co","sb_publishable_XCDG8j8Te4UHw_qw8yOnJA_hThHuRdT", {auth:{persistSession:false, autoRefreshToken:false}});
+  await loadAdminListings();
+  loadAutoAlerts();
+})();
 </script>
 </body></html>
