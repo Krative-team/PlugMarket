@@ -155,16 +155,17 @@ async function deleteAccount(){
   const btn = document.getElementById('deleteAccountBtn');
   if(btn){ btn.disabled = true; btn.innerText = "Deleting..."; }
   try {
-    const res = await fetch("https://pfrpgijjqajwuhyfcdgw.supabase.co/functions/v1/delete-account", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${session.access_token}`,
-        "Content-Type": "application/json"
-      }
-    });
-    if(!res.ok){
-      const txt = await res.text();
-      alert("Delete failed: " + txt + "\n\nDid you deploy the delete-account Edge Function?");
+    // NO Edge Function - uses RPC delete_my_account, same connection as listings
+    // This fixes "Load failed" - Edge Functions were unreachable from phone
+    const { data, error } = await client.rpc('delete_my_account');
+    console.log("delete_my_account:", data, error);
+    if(error){
+      alert("Delete failed: " + error.message);
+      if(btn){ btn.disabled = false; btn.innerText = "Delete Account"; }
+      return;
+    }
+    if(data && data.success === false){
+      alert("Delete failed: " + (data.error || "Unknown error"));
       if(btn){ btn.disabled = false; btn.innerText = "Delete Account"; }
       return;
     }
