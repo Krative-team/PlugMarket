@@ -6,6 +6,13 @@
 details summary{ list-style:none; cursor:pointer; }
 details summary::-webkit-details-marker{ display:none; }
 details summary::marker{ content:""; }
+.pass-wrap{position:relative}
+.pass-wrap input{padding-right:44px;box-sizing:border-box}
+.eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:#9AA0B0}
+.eye-btn:hover{color:#fff}
+.eye-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.verify-box{display:none;background:#0f2a1a;border:1px solid #00E676;border-radius:12px;padding:14px;font-size:13px;line-height:1.6;margin:12px 0;text-align:center}
+.verify-box b{color:#00E676}
 </style>
 </head>
 <body>
@@ -14,7 +21,22 @@ details summary::marker{ content:""; }
 <h2>Login / Sign Up</h2>
 <p id="authNotice" style="display:none;color:#FFA502;font-size:13px">Please login first to continue.</p>
 <label>Email</label><input id="auth-email" type="email" placeholder="you@gmail.com">
-<label>Password</label><input id="auth-pass" type="password" placeholder="Password">
+<label>Password</label>
+<div class="pass-wrap">
+  <input id="auth-pass" type="password" placeholder="Password">
+  <button type="button" class="eye-btn" id="togglePassBtn" onclick="togglePassword()" aria-label="Show password">
+    <svg id="eyeIcon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+  </button>
+</div>
+
+<div id="verifyBox" class="verify-box">
+  <b>📧 Check your email!</b><br>
+  We sent a confirmation link to <b id="verifyEmailText" style="color:#fff"></b><br>
+  Click the link to activate your account, then come back and Login.<br>
+  <button id="resendBtn" class="submit secondary" style="margin-top:10px" onclick="resendConfirmation()">Resend Confirmation Email</button>
+  <div id="resendMsg" style="font-size:12px;color:#9AA0B0;margin-top:8px"></div>
+</div>
+
 <details style="background:#0B0E14;border:1px solid #2A2E3A;border-radius:10px;padding:12px;margin:12px 0;font-size:13px;color:#C7CCD8"><summary style="font-weight:800;color:#fff">Terms & Conditions ▼</summary>
 <p style="margin:8px 0;line-height:1.5"><b>1. PlugMarket is an Escrow Marketplace.</b> Buyer makes payment to PlugMarket. PlugMarket holds 100% of payment until buyer tests and confirms any account purchased.</p>
 <p style="margin:8px 0;line-height:1.5"><b>2. Fees:</b> PlugMarket takes 15% fee. Seller receives 85% after buyer confirms login. Example: Buyer pays ₦100,000 - Seller gets ₦85,000, PlugMarket keeps ₦15,000.</p>
@@ -39,15 +61,70 @@ details summary::marker{ content:""; }
 <script>
 const nextPage=new URLSearchParams(location.search).get('next')||'index.html';
 if(new URLSearchParams(location.search).get('next')) document.getElementById('authNotice').style.display='block';
+// GITHUB PAGES FIX: keep the /repo/ folder in the redirect URL - works for 2 sites sharing 1 Supabase project
+function getRedirectUrl(){
+  return location.origin + location.pathname;
+}
+function togglePassword(){
+  const passInput=document.getElementById('auth-pass');
+  const icon=document.getElementById('eyeIcon');
+  const btn=document.getElementById('togglePassBtn');
+  const isHidden = passInput.type === 'password';
+  passInput.type = isHidden ? 'text' : 'password';
+  btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+  icon.innerHTML = isHidden
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  passInput.focus();
+}
+function showVerifyBox(email){
+  document.getElementById('verifyEmailText').innerText = email;
+  document.getElementById('verifyBox').style.display = 'block';
+}
+async function resendConfirmation(){
+  getClient();
+  const email=document.getElementById('auth-email').value.trim();
+  const rmsg=document.getElementById('resendMsg');
+  if(!email){ rmsg.innerText="Enter your email first."; return; }
+  rmsg.innerText="Sending...";
+  const {error} = await client.auth.resend({type:'signup', email:email, options:{emailRedirectTo: getRedirectUrl()}});
+  rmsg.innerText = error ? "Error: "+error.message : "Sent! Check your inbox + spam.";
+}
 async function doAuth(mode){
   getClient(); const email=document.getElementById('auth-email').value.trim(); const pass=document.getElementById('auth-pass').value; const msg=document.getElementById('authMsg');
   if(!email||!pass){ msg.innerText="Fill email and password"; return; }
   if(mode==='signup'&&!document.getElementById('terms-agree').checked){ msg.innerText="Tick 'I agree to Terms & Conditions' first."; return; }
   msg.innerText="Please wait...";
-  let res=mode==='signup'?await client.auth.signUp({email,password:pass}):await client.auth.signInWithPassword({email,password:pass});
-  if(res.error){ msg.innerText="Error: "+res.error.message; return; }
+  if(mode==='signup'){
+    const res = await client.auth.signUp({email, password:pass, options:{emailRedirectTo: getRedirectUrl()}});
+    if(res.error){ msg.innerText="Error: "+res.error.message; return; }
+    if(!res.data.session){
+      msg.innerText="";
+      showVerifyBox(email);
+      return;
+    }
+    msg.innerText="Success!";
+    setTimeout(()=>location.href=nextPage,800);
+    return;
+  }
+  const res = await client.auth.signInWithPassword({email, password:pass});
+  if(res.error){
+    if(res.error.message.toLowerCase().includes('email not confirmed') || res.error.message.toLowerCase().includes('not confirmed')){
+      msg.innerText="Your email is not confirmed yet.";
+      showVerifyBox(email);
+      return;
+    }
+    msg.innerText="Error: "+res.error.message; return;
+  }
   msg.innerText="Success!";
   setTimeout(()=>location.href=nextPage,800);
 }
+(async()=>{
+  getClient();
+  const {data:{user}} = await client.auth.getUser();
+  if(user && location.search.includes('type=signup')){
+    document.getElementById('authMsg').innerText = "Email confirmed! You can now login.";
+  }
+})();
 </script>
 </body></html>
