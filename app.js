@@ -145,3 +145,34 @@ function renderMarket(){
 }
 
 async function doLogout(){ await getClient().auth.signOut(); location.href='index.html'; }
+
+async function deleteAccount(){
+  if(!confirm("Are you sure? This will PERMANENTLY delete your account and your listings. This cannot be undone.")) return;
+  if(!confirm("Final confirm - Delete your PlugMarket account FOREVER?")) return;
+  getClient();
+  const { data: { session } } = await client.auth.getSession();
+  if(!session){ alert("Please login first"); return; }
+  const btn = document.getElementById('deleteAccountBtn');
+  if(btn){ btn.disabled = true; btn.innerText = "Deleting..."; }
+  try {
+    const res = await fetch("https://pfrpgijjqajwuhyfcdgw.supabase.co/functions/v1/delete-account", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`,
+        "Content-Type": "application/json"
+      }
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      alert("Delete failed: " + txt + "\n\nDid you deploy the delete-account Edge Function?");
+      if(btn){ btn.disabled = false; btn.innerText = "Delete Account"; }
+      return;
+    }
+    await client.auth.signOut();
+    alert("Account deleted permanently.");
+    location.href = "index.html";
+  } catch(e){
+    alert("Delete error: " + e.message);
+    if(btn){ btn.disabled = false; btn.innerText = "Delete Account"; }
+  }
+}
