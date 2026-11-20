@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout - PlugMarket</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.header,div.header,header{display:none!important}
+.pay-method{display:flex!important;gap:10px;margin:12px 0}
+.pay-method button{flex:1;padding:14px 10px;border-radius:12px;border:2px solid #2A2E3A;background:#151923;color:#fff;font-weight:700;cursor:pointer;font-size:15px;pointer-events:auto!important}
+.pay-method button small{font-weight:400;color:#9AA0B0}
+.pay-method button.active{border-color:#00E676!important;background:#0F2A1D!important;color:#00E676!important}
+.pay-method button.active small{color:#00E676}
+.account-card{background:#0B0E14;border:1px solid #2A2E3A;border-radius:12px;padding:14px;margin:12px 0;font-size:13px;line-height:1.7}
+.account-card b{color:#fff}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.modal-overlay.open{display:flex!important}
+.modal-box{background:#151923;border:1px solid #2A2E3A;border-radius:18px;width:100%;max-width:460px;padding:22px;animation:pop .2s ease;max-height:92vh;overflow-y:auto}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-box.paystack{border-top:5px solid #2563EB}
+.modal-box.usdt{border-top:5px solid #F59E0B}
+.modal-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:nowrap}
+.modal-head h3{margin:0;font-size:16px;white-space:nowrap;flex-shrink:0}
+.modal-head .pill{margin-left:auto;font-size:11px;font-weight:800;padding:4px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;line-height:1}
+.modal-box.paystack .pill{background:#1E3A8A;color:#BFDBFE}
+.modal-box.usdt .pill{background:#4A3200;color:#FDE68A}
+.modal-close{margin-left:6px;background:#2A2E3A;color:#fff;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:16px;font-weight:700;flex-shrink:0}
+.modal-box input{width:100%;box-sizing:border-box}
+.modal-box .submit{width:100%}
+</style>
+</head>
+<body>
+<div class="page">
+<div class="form-card">
+<h2 id="buyTitle">Checkout</h2>
+
+<div class="account-card" id="accountInfoBox">
+  <div id="buyDesc" style="color:#9AA0B0;font-size:13px"></div>
+  <div id="buyPrice" style="font-size:22px;font-weight:900;margin:10px 0;color:#fff"></div>
+  <div id="accountExtra"></div>
+</div>
+
+<div id="buyVideoBox" style="display:none;margin:12px 0"><video id="buyVideo" controls playsinline style="width:100%;border-radius:12px;background:#000;max-height:300px"></video><p style="font-size:12px;color:#9AA0B0;margin-top:6px">Watch video proof before you pay.</p></div>
+
+<div class="escrow-box">Purchase Protection: Your payment is protected. Test the purchased account, report back within 2 hours and get a refund if there is a problem.</div>
+
+<label>Payment Method *</label>
+<div class="pay-method">
+  <button type="button" id="payBtnBank" onclick="document.getElementById('paystackModal').classList.add('open');document.getElementById('usdtModal').classList.remove('open');this.classList.add('active');document.getElementById('payBtnUsdt').classList.remove('active')">Paystack<br><small id="bankAmountLabel">Loading...</small></button>
+  <button type="button" id="payBtnUsdt" onclick="document.getElementById('usdtModal').classList.add('open');document.getElementById('paystackModal').classList.remove('open');this.classList.add('active');document.getElementById('payBtnBank').classList.remove('active')">USDT<br><small id="usdtAmountLabel">Loading...</small></button>
+</div>
+<p style="font-size:12px;color:#9AA0B0;margin-top:6px">Choose a method to open its payment window.</p>
+
+<label>Your Email *</label><input id="buyer-email" type="email">
+<div id="verifiedBadge" style="background:#0F2A1D;border:1px solid #00E676;color:#00E676;padding:10px;border-radius:8px;font-size:13px;display:none;margin:10px 0">Payment Verified.</div>
+
+<div id="credentialsBox" class="credentials-box" style="display:none">
+<h3 id="credTitle">Your Logins</h3>
+<div class="cred-row"><span id="credUserLabel">Username:</span><b id="credUser"></b><button class="copy-btn" onclick="copyText('credUser')">Copy</button></div>
+<div class="cred-row"><span id="credPassLabel">Password:</span><b id="credPass"></b><button class="copy-btn" onclick="copyText('credPass')">Copy</button></div>
+<div class="cred-row"><span id="credEmailLabel">Email:</span><b id="credEmail"></b><button class="copy-btn" onclick="copyText('credEmail')">Copy</button></div>
+<div style="background:#151923;padding:10px;border-radius:8px;font-size:13px" id="credNotes"></div>
+<div class="warning-box">Change password immediately. You have 2 hours to test.</div>
+<button class="submit" onclick="confirmReceived()">I Have Logged In</button>
+<button class="submit danger" onclick="reportProblem()">Report Problem - Do NOT Pay Seller</button>
+</div>
+<div id="noCredsBox" class="warning-box" style="display:none">Seller did not add logins.</div>
+
+<div id="postProofBox" style="display:none;margin-top:14px"><h3>Upload Proof (Optional)</h3>
+<div style="border:2px dashed #888;border-radius:12px;padding:14px;text-align:center;margin:10px 0"><input type="file" id="post-receipt" accept="image/*" onchange="previewReceipt()"><img id="postReceiptPreview" style="width:100%;max-height:280px;object-fit:contain;border-radius:10px;margin-top:10px;display:none"><div id="postReceiptInfo" class="msg" style="display:none">Selected.</div></div>
+<button class="submit" onclick="uploadPostProof()">Upload Proof</button><div id="postProofMsg" class="msg"></div>
+<div id="receiptSavedBox" style="display:none;background:#0F2A1D;border:1px solid #00E676;border-radius:8px;padding:10px;font-size:13px;margin:8px 0">Proof saved. <a id="receiptSavedLink" href="#" target="_blank" style="color:#00E676">View Proof</a></div></div>
+
+<button class="close" onclick="location.href='index.html'">Back to Marketplace</button>
+<div id="buyMsg" class="msg"></div>
+</div>
+</div>
+
+<!-- PAYSTACK MODAL - BLUE -->
+<div id="paystackModal" class="modal-overlay" onclick="if(event.target===this) this.classList.remove('open')">
+  <div class="modal-box paystack">
+    <div class="modal-head">
+      <h3 style="color:#60A5FA">Pay With Paystack</h3>
+      <span class="pill" id="bankAmountPill"></span>
+      <button class="modal-close" onclick="document.getElementById('paystackModal').classList.remove('open')">x</button>
+    </div>
+    <div style="background:#0B0E14;border-radius:8px;padding:10px;margin:8px 0;font-size:14px"><b>Amount:</b> <span id="bankAmountVal"></span><br><span style="font-size:12px;color:#00E676">100% refundable</span></div>
+    <label>Your Email *</label><input id="paystack-email" type="email">
+    <div style="display:flex;gap:10px;align-items:flex-start;background:#0B0E14;border-radius:8px;padding:10px;margin:10px 0;font-size:13px"><input type="checkbox" id="paystack-confirm-check" style="width:18px;height:18px"><span>I will pay via Paystack.</span></div>
+    <div id="bankVerifyResult" style="padding:10px;border-radius:8px;font-size:13px;margin:10px 0;display:none"></div>
+    <button class="submit" style="background:#2563EB" onclick="payWithPaystackSplit()">Pay With Paystack</button>
+    <p style="font-size:12px;color:#9AA0B0;margin-top:12px;text-align:center">— OR if you already paid —</p>
+    <label>Paystack Transaction ID / Reference</label><input id="paystack-reference" placeholder="PLUG-...">
+    <button class="submit outline" onclick="verifyPaystackByReference()">Verify With Transaction ID</button>
+  </div>
+</div>
+
+<!-- USDT MODAL - GOLD -->
+<div id="usdtModal" class="modal-overlay" onclick="if(event.target===this) this.classList.remove('open')">
+  <div class="modal-box usdt">
+    <div class="modal-head">
+      <h3 style="color:#F59E0B">Pay With USDT</h3>
+      <span class="pill" id="usdtAmountPill"></span>
+      <button class="modal-close" onclick="document.getElementById('usdtModal').classList.remove('open')">x</button>
+    </div>
+    <div style="background:#0B0E14;border-radius:8px;padding:10px;margin:8px 0;font-size:14px;word-break:break-all"><b>Wallet:</b><br><span id="usdtWalletVal"></span> <button class="copy-btn" onclick="copyText('usdtWalletVal')">Copy</button></div>
+    <div style="background:#0B0E14;border-radius:8px;padding:10px;margin:8px 0;font-size:14px"><b>Network:</b> <span id="usdtNetworkVal"></span></div>
+    <div style="background:#0B0E14;border-radius:8px;padding:10px;margin:8px 0;font-size:14px"><b>Amount:</b> <span id="usdtAmountVal"></span><br><span style="font-size:12px;color:#00E676">100% refundable</span></div>
+    <label>Tx Hash *</label><input id="usdt-txhash">
+    <div style="display:flex;gap:10px;align-items:flex-start;background:#0B0E14;border-radius:8px;padding:10px;margin:10px 0;font-size:13px"><input type="checkbox" id="usdt-confirm-check" style="width:18px;height:18px"><span>I sent USDT to the wallet above.</span></div>
+    <div id="usdtVerifyResult" style="padding:10px;border-radius:8px;font-size:13px;margin:10px 0;display:none"></div>
+    <button class="submit" style="background:#F59E0B;color:#000" onclick="verifyUsdtPayment()">Verify USDT Payment</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="app.js"></script>
+<script>
+let lastPayMethodCheckout=null, postReceiptFile=null, lastReceiptUrl=null;
+document.querySelectorAll('.header').forEach(e=>e.remove());
+// Strip any Contact / WhatsApp / phone / email lines sellers put in description
+function cleanDesc(t){
+  if(!t) return '';
+  return t.split('\n').filter(line=>{
+    const l=line.toLowerCase();
+    return !l.includes('contact') && !l.includes('whatsapp') && !l.includes('wa.me') && !l.includes('phone') && !l.includes('call me') && !l.includes('dm me') && !l.includes('telegram');
+  }).join(' ').replace(/\s+/g,' ').trim();
+}
+async function serverVerify(payload){ const res=await fetch(VERIFY_URL,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer sb_publishable_XCDG8j8Te4UHw_qw8yOnJA_hThHuRdT"},body:JSON.stringify(payload)}); return await res.json(); }
+function syncAmounts(){
+  if(!currentBuy) return;
+  const naira="NGN "+Number(currentBuy.price_naira).toLocaleString();
+  const usdt="$"+currentBuy.price_usdt+" USDT";
+  document.getElementById('bankAmountLabel').innerText=naira;
+  document.getElementById('usdtAmountLabel').innerText=usdt;
+  document.getElementById('bankAmountVal').innerText=naira;
+  document.getElementById('usdtAmountVal').innerText=usdt;
+  document.getElementById('bankAmountPill').innerText=naira;
+  document.getElementById('usdtAmountPill').innerText=usdt;
+  document.getElementById('usdtWalletVal').innerText=PLUGMARKET_USDT_WALLET;
+  document.getElementById('usdtNetworkVal').innerText=PLUGMARKET_USDT_NETWORK;
+}
+function closePayModals(){
+  document.getElementById('paystackModal').classList.remove('open');
+  document.getElementById('usdtModal').classList.remove('open');
+}
+function copyText(id){ navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>document.getElementById('buyMsg').innerText="Copied!"); }
+function previewReceipt(){ const f=document.getElementById('post-receipt').files[0]; if(!f) return; postReceiptFile=f; const r=new FileReader(); r.onload=e=>{ const img=document.getElementById('postReceiptPreview'); img.src=e.target.result; img.style.display='block'; document.getElementById('postReceiptInfo').style.display='block'; }; r.readAsDataURL(f); }
+async function uploadPostProof(){ if(!postReceiptFile){ document.getElementById('postProofMsg').innerText="Select screenshot first."; return; } document.getElementById('postProofMsg').innerText="Uploading..."; try{ const fn='proof-'+currentBuy.id+'-'+Date.now()+'-'+postReceiptFile.name.replace(/[^a-zA-Z0-9.]/g,''); const {error}=await client.storage.from('receipts').upload(fn,postReceiptFile); if(error) throw error; const {data}=client.storage.from('receipts').getPublicUrl(fn); lastReceiptUrl=data.publicUrl; document.getElementById('receiptSavedBox').style.display='block'; document.getElementById('receiptSavedLink').href=lastReceiptUrl; document.getElementById('postProofMsg').innerText="Proof saved."; }catch(e){ document.getElementById('postProofMsg').innerText="Upload failed."; } }
+async function payWithPaystackSplit(){
+  const buyerEmail=document.getElementById('paystack-email').value.trim()||document.getElementById('buyer-email').value.trim();
+  const box=document.getElementById('bankVerifyResult'); box.style.display='block';
+  if(!buyerEmail||!buyerEmail.includes('@')){ box.style.background='#2A1212'; box.style.color='#FF6B6B'; box.innerText="Enter valid email."; return; }
+  if(!document.getElementById('paystack-confirm-check').checked){ box.style.background='#2A1212'; box.style.color='#FF6B6B'; box.innerText="Tick confirmation."; return; }
+  const handler=PaystackPop.setup({key:PAYSTACK_PUBLIC_KEY,email:buyerEmail,amount:Math.round(Number(currentBuy.price_naira)*100),currency:'NGN',ref:'PLUG-'+currentBuy.id+'-'+Date.now(),metadata:{listing_id:currentBuy.id,escrow:true},callback:async function(res){ box.style.background='#0F2A1D'; box.style.color='#00E676'; box.innerText="Verifying on SERVER..."; try{ const v=await serverVerify({method:"paystack",reference:res.reference,expected_naira:currentBuy.price_naira}); if(!v.verified){ box.style.background='#2A1212'; box.style.color='#FF6B6B'; box.innerText="REJECTED: "+v.reason; return; } lastPayMethodCheckout='paystack'; document.getElementById('paystack-reference').value=res.reference; box.innerText="VERIFIED: NGN "+v.amount+" held by PlugMarket."; closePayModals(); unlockLogins('paystack',`Server Verified - Paystack NGN ${v.amount} - Ref: ${res.reference}`); }catch(e){ box.innerText="Server verification failed."; } },onClose:function(){ document.getElementById('buyMsg').innerText="Payment not completed. If you already paid, paste Transaction ID."; }}); handler.openIframe();
+}
+async function verifyPaystackByReference(){
+  const ref=document.getElementById('paystack-reference').value.trim(); const box=document.getElementById('bankVerifyResult'); box.style.display='block';
+  if(!ref||ref.length<5){ box.style.background='#2A1212'; box.style.color='#FF6B6B'; box.innerText="Enter Transaction ID."; return; }
+  box.style.background='#0F2A1D'; box.style.color='#00E676'; box.innerText="Verifying on SERVER...";
+  try{ const v=await serverVerify({method:"paystack",reference:ref,expected_naira:currentBuy.price_naira}); if(!v.verified){ box.style.background='#2A1212'; box.style.color='#FF6B6B'; box.innerText="REJECTED: "+v.reason; return; } lastPayMethodCheckout='paystack'; box.innerText="VERIFIED: NGN "+v.amount+" held."; closePayModals(); unlockLogins('paystack',`Server Verified - Paystack NGN ${v.amount} - Ref: ${ref}`); }catch(e){ box.innerText="Server verification failed."; }
+}
+async function verifyUsdtPayment(){
+  const tx=document.getElementById('usdt-txhash').value.trim(); const box=document.getElementById('usdtVerifyResult'); box.style.display='block';
+  if(!tx||tx.length<10){ box.style.background='#2A1212'; box.style.color='#FF6B6B'; box.innerText="Enter Tx Hash."; return; }
+  if(!document.getElementById('usdt-confirm-check').checked){ box.style.background='#2A1212'; box.style.color='#FF6B6B'; box.innerText="Tick confirmation."; return; }
+  box.style.background='#0F2A1D'; box.style.color='#00E676'; box.innerText="Verifying on SERVER...";
+  try{ const v=await serverVerify({method:"usdt",tx_hash:tx,expected_usdt:currentBuy.price_usdt}); if(!v.verified){ box.style.background='#2A1212'; box.style.color='#FF6B6B'; box.innerText="REJECTED: "+v.reason; return; } lastPayMethodCheckout='usdt'; box.innerText="VERIFIED: USDT $"+v.amount+" held."; closePayModals(); unlockLogins('usdt',`Server Verified - USDT $${v.amount} - Tx: ${tx.slice(0,12)}...`); }catch(e){ box.innerText="Server verification failed."; }
+}
+function unlockLogins(method,details){
+  document.getElementById('verifiedBadge').style.display='block'; document.getElementById('verifiedBadge').innerText="Payment Verified - "+details; document.getElementById('postProofBox').style.display='block';
+  if(currentBuy.account_username&&currentBuy.account_password){
+    const isYT=currentBuy.platform==='YouTube';
+    document.getElementById('credTitle').innerText="Your "+currentBuy.platform+" Logins";
+    document.getElementById('credUserLabel').innerText=isYT?"Google Email:":"Username:"; document.getElementById('credPassLabel').innerText=isYT?"Google Password:":"Password:"; document.getElementById('credEmailLabel').innerText=isYT?"Recovery Email:":"Email:";
+    document.getElementById('credUser').innerText=currentBuy.account_username; document.getElementById('credPass').innerText=currentBuy.account_password; document.getElementById('credEmail').innerText=currentBuy.account_email||'Not provided'; document.getElementById('credNotes').innerText=currentBuy.account_notes?"Notes: "+currentBuy.account_notes:"Change password immediately.";
+    document.getElementById('credentialsBox').style.display='block';
+  } else document.getElementById('noCredsBox').style.display='block';
+}
+async function confirmReceived(){ if(!confirm("Confirm you logged in? This releases 85% to seller.")) return; const {error}=await client.from('market_listings').update({status:'sold'}).eq('id',currentBuy.id); if(error){ alert(error.message); return; } alert("Thank you! Seller will get 85% (NGN "+calcSellerShare(currentBuy.price_naira).toLocaleString()+")."); setTimeout(()=>location.href='marketplace.html',800); }
+function reportProblem(){ alert("Dispute noted for: "+currentBuy.title+". Seller will NOT be paid until we check. Proof: "+(lastReceiptUrl||'No proof uploaded')); document.getElementById('buyMsg').innerText="Dispute noted. Seller will NOT be paid until we check."; }
+(async()=>{ getClient(); const {data:{user}}=await client.auth.getUser(); if(!user){ location.href='auth.html?next='+encodeURIComponent(location.pathname+location.search); return; } currentUser=user;
+const id=new URLSearchParams(location.search).get('id'); if(!id){ document.getElementById('buyTitle').innerText="No listing selected."; return; }
+const {data}=await client.from('market_listings').select('*').eq('id',id).single(); if(!data){ document.getElementById('buyTitle').innerText="Listing not found."; return; } currentBuy=data;
+const safeDesc=cleanDesc(currentBuy.description);
+document.getElementById('buyTitle').innerText="Buy: "+currentBuy.title;
+document.getElementById('buyDesc').innerText=currentBuy.platform+" | "+currentBuy.country+" | "+Number(currentBuy.followers).toLocaleString()+" followers | "+safeDesc;
+document.getElementById('accountExtra').innerHTML="<b>Platform:</b> "+(currentBuy.platform||'-')+"<br><b>Followers:</b> "+Number(currentBuy.followers||0).toLocaleString()+"<br><b>Country:</b> "+(currentBuy.country||'-')+"<br><b>2FA / OTP:</b> Yes<br><b>About:</b> "+(safeDesc||'No description');
+if(currentBuy.video_url){ document.getElementById('buyVideoBox').style.display='block'; document.getElementById('buyVideo').src=currentBuy.video_url; }
+document.getElementById('buyPrice').innerText="NGN "+Number(currentBuy.price_naira).toLocaleString()+" ($"+currentBuy.price_usdt+" USDT)";
+syncAmounts();
+if(user.email){ document.getElementById('buyer-email').value=user.email; document.getElementById('paystack-email').value=user.email; }
+})();
+</script>
+</body></html>
