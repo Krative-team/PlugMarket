@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transfer - PlugMarket</title>
+<link rel="stylesheet" href="style.css?v=13">
+</head>
+<body>
+<div class="page">
+<div class="form-card">
+
+<h2 id="t-title">Transfer</h2>
+<div id="t-info" style="font-size:13px;color:#aaa;margin:8px 0">Loading...</div>
+
+<div id="t-timer" style="background:#FFA502;color:#000;font-weight:700;text-align:center;padding:10px;border-radius:10px;margin:10px 0">Time left: 30:00</div>
+
+<!-- BUYER -->
+<div id="buyerBox">
+<h3>BUYER: Need OTP?</h3>
+<p style="font-size:13px;line-height:1.5">
+1. Try to log in with the details below<br>
+2. If Facebook / Instagram asks for OTP, click Request OTP<br>
+3. Seller will paste the code here — it will appear below
+</p>
+
+<div style="background:#0B0E14;padding:12px;border-radius:10px;font-size:13px;line-height:1.7" id="loginBox">Loading login...</div>
+
+<button class="submit" onclick="requestOTP()" style="margin-top:12px">Request OTP From Seller</button>
+
+<div id="otpForBuyer" style="display:none;background:#00E676;color:#000;font-weight:800;text-align:center;padding:16px;border-radius:12px;margin-top:12px;font-size:22px;letter-spacing:4px"></div>
+
+<div id="buyerMsg" class="msg"></div>
+
+<button class="submit" onclick="confirmReceived()" style="background:#00E676;color:#fff;margin-top:10px">I Have Control - Release Payment</button>
+<button class="close" onclick="reportNoOTP()">Seller Not Sending OTP - Report</button>
+</div>
+
+<!-- SELLER -->
+<div id="sellerBox" style="display:none;margin-top:20px;border-top:1px solid #333;padding-top:16px">
+<h3>SELLER: Send OTP</h3>
+<p style="font-size:13px;line-height:1.5">Buyer is trying to log in. Check your SMS / Email for the Facebook code and paste it here. Do NOT send it on WhatsApp.</p>
+<input id="seller-otp" placeholder="6-digit code" inputmode="numeric" onfocus="this.dataset.ph=this.placeholder; this.placeholder=''" onblur="if(!this.value) this.placeholder=this.dataset.ph">
+<button class="submit" onclick="sendOTP()">Send OTP To Buyer</button>
+<div id="sellerMsg" class="msg"></div>
+</div>
+
+<button class="close" onclick="location.href='index.html'">Back to Marketplace</button>
+
+</div>
+</div>
+<div class="footer-bar">PlugMarket © 2026 - Buyer Protected Marketplace</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js?v=13"></script>
+<script>
+let listing=null, me=null, otpReq=null, secsLeft=30*60;
+
+async function load(){
+  getClient();
+  const {data:{user}} = await client.auth.getUser();
+  if(!user){ location.href='auth.html?next=transfer.html'; return; }
+  me=user;
+  const id=new URLSearchParams(location.search).get('listing');
+  if(!id){ document.getElementById('t-info').innerText="No listing ID. Open from Marketplace Buy button."; return; }
+  const {data, error} = await client.from('market_listings').select('*').eq('id', id).single();
+  if(error || !data){ document.getElementById('t-info').innerText="Listing not found: "+(error?error.message:''); return; }
+  listing=data;
+  document.getElementById('t-title').innerText="Transfer: "+data.title;
+  document.getElementById('t-info').innerText=data.platform+" - "+data.followers+" followers - ₦"+(data.price_naira||'');
+  document.getElementById('loginBox').innerHTML="Username/Email: <b>"+(data.account_username||'-')+"</b><br>Password: <b>"+(data.account_password||'-')+"</b><br>Linked Email: <b>"+(data.account_email||'-')+"</b><br>Notes: "+(data.account_notes||'-')+"<br>2FA: "+(data.has_2fa||'yes');
+  if(me.id===data.seller_uid) document.getElementById('sellerBox').style.display='block';
+  checkOTP();
+  setInterval(checkOTP, 3000);
+}
+
+async function requestOTP(){
+  const {data, error} = await client.from('otp_requests').insert([{listing_id: listing.id, buyer_uid: me.id, seller_uid: listing.seller_uid, status:'waiting'}]).select().single();
+  if(error){ document.getElementById('buyerMsg').innerText="Error: "+error.message; return; }
+  if(data) otpReq=data;
+  document.getElementById('buyerMsg').innerText="OTP requested. Seller has been notified. Wait here - code will appear above.";
+}
+
+async function sendOTP(){
+  const code=document.getElementById('seller-otp').value.trim();
+  if(code.length<4){ document.getElementById('sellerMsg').innerText="Enter the code"; return; }
+  const {data, error} = await client.from('otp_requests').select('*').eq('listing_id', listing.id).eq('status','waiting').order('created_at',{ascending:false}).limit(1).single();
+  if(error || !data){ document.getElementById('sellerMsg').innerText="No buyer request yet. Ask buyer to click Request OTP."; return; }
+  const upd = await client.from('otp_requests').update({otp_code: code, status:'sent'}).eq('id', data.id);
+  if(upd.error){ document.getElementById('sellerMsg').innerText="Error: "+upd.error.message; return; }
+  document.getElementById('sellerMsg').innerText="Sent! Buyer can now see it.";
+}
+
+async function checkOTP(){
+  if(!listing) return;
+  const {data} = await client.from('otp_requests').select('*').eq('listing_id', listing.id).order('created_at',{ascending:false}).limit(1).single();
+  if(!data) return;
+  otpReq=data;
+  if(data.status==='sent' && data.otp_code){
+    const box=document.getElementById('otpForBuyer');
+    box.style.display='block';
+    box.innerText="OTP: "+data.otp_code;
+    document.getElementById('buyerMsg').innerText="OTP received! Enter it in Facebook now.";
+  }
+  if(me.id===listing.seller_uid && data.status==='waiting'){
+    document.getElementById('sellerMsg').innerText="⚠️ BUYER IS WAITING FOR OTP! Check your SMS / Email now.";
+  }
+}
+
+async function confirmReceived(){
+  if(!confirm("Are you SURE you have full control? You changed email / phone / password?")) return;
+  await client.from('market_listings').update({status:'sold'}).eq('id', listing.id);
+  alert("Confirmed! Admin will release 85% to seller.");
+  location.href='marketplace.html';
+}
+
+async function reportNoOTP(){
+  if(!confirm("Report seller for not sending OTP? Deal will be reviewed for refund.")) return;
+  if(otpReq) await client.from('otp_requests').update({status:'cancelled'}).eq('id', otpReq.id);
+  alert("Reported. Admin will review and refund if seller ghosted.");
+}
+
+setInterval(function(){
+  if(secsLeft<=0){ document.getElementById('t-timer').innerText="TIME EXPIRED - Deal auto-cancelled for review"; return; }
+  secsLeft--;
+  const m=Math.floor(secsLeft/60), s=secsLeft%60;
+  document.getElementById('t-timer').innerText="Time left: "+m+":"+(s<10?"0"+s:s);
+},1000);
+
+load();
+</script>
+</body>
+</html>
