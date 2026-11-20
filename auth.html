@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login / Sign Up - PlugMarket</title><link rel="stylesheet" href="style.css">
+<style>
+details summary{ list-style:none; cursor:pointer; }
+details summary::-webkit-details-marker{ display:none; }
+details summary::marker{ content:""; }
+</style>
+</head>
+<body>
+<div class="page">
+<div class="form-card" style="max-width:480px">
+<h2>Login / Sign Up</h2>
+<p id="authNotice" style="display:none;color:#FFA502;font-size:13px">Please login first to continue.</p>
+<label>Email</label><input id="auth-email" type="email" placeholder="you@gmail.com">
+<label>Password</label><input id="auth-pass" type="password" placeholder="Password">
+<details style="background:#0B0E14;border:1px solid #2A2E3A;border-radius:10px;padding:12px;margin:12px 0;font-size:13px;color:#C7CCD8"><summary style="font-weight:800;color:#fff">Terms & Conditions ▼</summary>
+<p style="margin:8px 0;line-height:1.5"><b>1. PlugMarket is an Escrow Marketplace.</b> Buyer makes payment to PlugMarket. PlugMarket holds 100% of payment until buyer tests and confirms any account purchased.</p>
+<p style="margin:8px 0;line-height:1.5"><b>2. Fees:</b> PlugMarket takes 15% fee. Seller receives 85% after buyer confirms login. Example: Buyer pays ₦100,000 - Seller gets ₦85,000, PlugMarket keeps ₦15,000.</p>
+<p style="margin:8px 0;line-height:1.5"><b>3. Video Proof is Mandatory:</b> Every seller MUST upload a 15-60 sec screen recording displaying the account listed (profile, followers, monetization, etc). No video = No listing. Buyers must watch video before paying.</p>
+<p style="margin:8px 0;line-height:1.5"><b>4. Verification:</b> All listings are PENDING until they are confirmed and verified by PlugMarket. Fake / wrong logins = listing rejected and account banned.</p>
+<p style="margin:8px 0;line-height:1.5"><b>5. Buyer Protection - 2 Hours:</b> Buyer has 2 hours to test login and confirm account after payment. Payment is held by PlugMarket, if login fails, buyer must click Report Problem. PlugMarket will investigate and refund if login is fake.</p>
+<p style="margin:8px 0;line-height:1.5"><b>6. Seller Rules:</b> Seller must not change password / recover account after sale. Doing so = ban + no payout. Seller must provide true followers, country, and monetization status.</p>
+<p style="margin:8px 0;line-height:1.5"><b>7. No Off-Platform Deals:</b> Do not ask buyers to pay you directly via WhatsApp to avoid fees. All payments must go through PlugMarket Paystack / USDT wallet or you lose protection.</p>
+<p style="margin:8px 0;line-height:1.5"><b>8. Refunds:</b> Refund only if login does not work as described and buyer reports within 2 hours with proof. If buyer does not report back within the first 2 hours of purchase, PlugMarket will not refund. Change of mind = No refund.</p>
+<p style="margin:8px 0;line-height:1.5"><b>9. Account Deletion:</b> You can delete your account anytime. Your listings will be removed.</p>
+<p style="color:#9AA0B0;font-size:12px">By creating an account, you agree to these Terms. Last updated: 2026.</p>
+</details>
+<div style="display:flex;gap:10px;align-items:flex-start;background:#0B0E14;border-radius:8px;padding:10px;margin:10px 0;font-size:13px"><input type="checkbox" id="terms-agree" style="width:18px;height:18px"><span>I agree to Terms & Conditions.</span></div>
+<button class="submit" onclick="doAuth('signup')">Create Account</button>
+<button class="submit secondary" onclick="doAuth('login')">Login</button>
+<div id="authMsg" class="msg"></div>
+<button class="close" onclick="location.href='index.html'">Back to Marketplace</button>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+<script>
+const nextPage=new URLSearchParams(location.search).get('next')||'index.html';
+if(new URLSearchParams(location.search).get('next')) document.getElementById('authNotice').style.display='block';
+async function doAuth(mode){
+  getClient(); const email=document.getElementById('auth-email').value.trim(); const pass=document.getElementById('auth-pass').value; const msg=document.getElementById('authMsg');
+  if(!email||!pass){ msg.innerText="Fill email and password"; return; }
+  if(mode==='signup'&&!document.getElementById('terms-agree').checked){ msg.innerText="Tick 'I agree to Terms & Conditions' first."; return; }
+  msg.innerText="Please wait...";
+  let res=mode==='signup'?await client.auth.signUp({email,password:pass}):await client.auth.signInWithPassword({email,password:pass});
+  if(res.error){ msg.innerText="Error: "+res.error.message; return; }
+  msg.innerText="Success!";
+  setTimeout(()=>location.href=nextPage,800);
+}
+</script>
+</body></html>
